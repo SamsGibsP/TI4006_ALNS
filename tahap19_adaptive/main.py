@@ -25,12 +25,12 @@ from cvrp_instance import CVRPInstance
 from destroy import DestroyOperator
 from repair import RepairOperator
 
-NILAI_OPTIMAL = 784
+NILAI_OPTIMAL = 27591
 MAKS_ITERASI = 2000
 SEED = 42
 
 folder = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(folder, "A", "A-n32-k5.vrp")
+path = os.path.join(folder, "X", "X-n101-k25.vrp")
 daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path)
 instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
 

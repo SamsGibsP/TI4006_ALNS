@@ -22,35 +22,28 @@ import math
 
 
 class CVRPInstance:
-    """Seluruh data satu instance CVRP."""
-
     def __init__(self, daftar_node, kapasitas, jumlah_kendaraan):
-        self.daftar_node = daftar_node              # berisi objek Node
-        self.kapasitas = kapasitas                  # variabel biasa
-        self.jumlah_kendaraan = jumlah_kendaraan    # variabel biasa
-
-        # depot adalah node pertama pada instance ini
+        self.daftar_node = daftar_node
+        self.kapasitas = kapasitas
+        self.jumlah_kendaraan = jumlah_kendaraan
         self.depot = daftar_node[0]
-
-        # pelanggan = semua node selain depot
         self.pelanggan = [n for n in daftar_node if not n.adalah_depot()]
 
-    # =====================================================================
-    # METODE 1 : mengambil node berdasarkan nomornya
-    # =====================================================================
-    def ambil_node(self, nomor):
-        """Mengembalikan objek Node dengan nomor tertentu."""
-        for n in self.daftar_node:
-            if n.nomor == nomor:
-                return n
-        raise KeyError(f"Node nomor {nomor} tidak ada.")
+        # 1. Lookup node O(1)
+        self.node_dict = {n.nomor: n for n in self.daftar_node}
 
-    # =====================================================================
-    # METODE 2 : jarak antara dua node
-    # =====================================================================
+        # 2. Precompute matriks jarak O(1)
+        max_id = max(self.node_dict.keys())
+        self.matrix_jarak = [[0] * (max_id + 1) for _ in range(max_id + 1)]
+        for u in self.daftar_node:
+            for v in self.daftar_node:
+                self.matrix_jarak[u.nomor][v.nomor] = u.jarak_ke(v)
+
+    def ambil_node(self, nomor):
+        return self.node_dict[nomor]
+
     def jarak(self, nomor_a, nomor_b):
-        """Jarak antara dua node, ditunjuk dengan nomornya."""
-        return self.ambil_node(nomor_a).jarak_ke(self.ambil_node(nomor_b))
+        return self.matrix_jarak[nomor_a][nomor_b]
 
     # =====================================================================
     # METODE 3 : ringkasan angka-angka penting
