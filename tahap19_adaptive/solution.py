@@ -1,16 +1,10 @@
 """
-solution.py  —  TAHAP 8
+solution.py — TAHAP 8 (TEROPTIMASI)
 ===============================================================================
 Kelas Solution: satu solusi lengkap CVRP.
-
-Susunannya bersarang tiga lapis:
-
-    Solution  berisi beberapa  Route
-    Route     berisi beberapa  Visit
-    Visit     merujuk ke satu  Node
-
-Solution inilah yang nanti dihasilkan oleh heuristik konstruktif,
-diperbaiki oleh local search, dan dibandingkan dengan nilai optimal.
+Optimasi:
+  - hemat_bila_dikeluarkan langsung memanfaatkan cache rute.node_ids (tanpa generate list)
+  - keluarkan() menggunakan index lookup langsung pada rute.node_ids
 ===============================================================================
 """
 
@@ -36,48 +30,44 @@ class Solution:
     def buang_rute_kosong(self):
         self.daftar_rute = [r for r in self.daftar_rute if not r.kosong()]
 
+    def rute_terisi(self):
+        return [r for r in self.daftar_rute if not r.kosong()]
+
+    def jumlah_rute_terisi(self):
+        return len(self.rute_terisi())
+
     # =====================================================================
     # NILAI YANG DIHITUNG DARI ISI SOLUSI
     # =====================================================================
     @property
     def total_jarak(self):
-        """
-        FUNGSI TUJUAN: total jarak seluruh rute. Inilah yang diminimalkan.
-
-        @property membuat kita menulis  solusi.total_jarak  tanpa kurung,
-        seolah-olah sebuah atribut biasa, padahal nilainya dihitung
-        saat itu juga.
-        """
         return sum(r.total_jarak for r in self.daftar_rute)
 
     @property
     def jumlah_rute(self):
-        return len([r for r in self.daftar_rute if not r.kosong()])
+        return self.jumlah_rute_terisi()
+
+    def hitung_ulang(self):
+        for r in self.daftar_rute:
+            r.hitung_ulang()
 
     def nomor_dikunjungi(self):
         """Semua nomor pelanggan yang sudah masuk ke dalam rute."""
-        return [v.nomor for r in self.daftar_rute for v in r.daftar_visit]
+        return [node_id for r in self.rute_terisi() for node_id in r.node_ids]
 
     # =====================================================================
     # MEMERIKSA KELAYAKAN
     # =====================================================================
     def daftar_pelanggaran(self):
-        """
-        Mengembalikan DAFTAR pelanggaran. Daftar kosong berarti solusi layak.
-
-        Sengaja berupa daftar, bukan True/False. Saat solusi ditolak, yang
-        ingin kita tahu bukan sekadar "layak atau tidak", melainkan
-        aturan MANA yang dilanggar.
-        """
         masalah = []
 
-        # 1. tiap rute tidak boleh melebihi kapasitas
-        for i, r in enumerate(self.daftar_rute, start=1):
+        # 1. Tiap rute terisi tidak boleh melebihi kapasitas
+        for i, r in enumerate(self.rute_terisi(), start=1):
             if r.total_muatan > self.instance.kapasitas:
                 masalah.append(f"Rute {i} kelebihan muatan: "
                                f"{r.total_muatan} > {self.instance.kapasitas}")
 
-        # 2. semua pelanggan harus dilayani, tepat satu kali
+        # 2. Semua pelanggan harus dilayani tepat satu kali
         dikunjungi = self.nomor_dikunjungi()
         seharusnya = [n.nomor for n in self.instance.pelanggan]
 
@@ -88,77 +78,79 @@ class Solution:
         if len(dikunjungi) != len(set(dikunjungi)):
             masalah.append("Ada pelanggan yang dikunjungi lebih dari sekali")
 
-        # 3. jumlah rute tidak boleh melebihi armada
-        if self.jumlah_rute > self.instance.jumlah_kendaraan:
-            masalah.append(f"Butuh {self.jumlah_rute} rute, "
+        # 3. Jumlah rute terisi tidak boleh melebihi armada
+        rute_terisi = self.jumlah_rute_terisi()
+        if rute_terisi > self.instance.jumlah_kendaraan:
+            masalah.append(f"Butuh {rute_terisi} rute terisi, "
                            f"armada hanya {self.instance.jumlah_kendaraan}")
 
         return masalah
 
     def layak(self):
-        return len(self.daftar_pelanggaran()) == 0
+        # 1. Cek jumlah armada kendaraan (hanya rute yang terisi)
+        if len(self.rute_terisi()) > self.instance.jumlah_kendaraan:
+            return False
+
+        # 2. Cek kapasitas tiap rute
+        for r in self.rute_terisi():
+            if r.total_muatan > self.instance.kapasitas:
+                return False
+
+        # 3. Cek semua pelanggan terlayani tepat satu kali
+        dikunjungi = []
+        for r in self.rute_terisi():
+            dikunjungi.extend(r.nomor_node())
+
+        if len(dikunjungi) != len(self.instance.pelanggan):
+            return False
+        if len(set(dikunjungi)) != len(self.instance.pelanggan):
+            return False
+
+        return True
 
     # =====================================================================
-    # MEMBUAT SALINAN (lihat Tahap 10)
+    # MEMBUAT SALINAN
     # =====================================================================
     def copy(self):
-        """
-        Salinan solusi yang sepenuhnya terpisah dari aslinya.
-        Perhatikan rantainya: Solution.copy memanggil Route.copy,
-        Route.copy memanggil Visit.copy.
-        """
         baru = Solution(self.instance)
         baru.daftar_rute = [r.copy() for r in self.daftar_rute]
         return baru
 
     # =====================================================================
-    # MENCETAK
-    # =====================================================================
-    # =====================================================================
-    # BAGIAN BARU (TAHAP 13) : UNTUK DESTROY DAN REPAIR
+    # UNTUK DESTROY DAN REPAIR
     # =====================================================================
     def keluarkan(self, nomor):
-        """
-        Mengeluarkan satu pelanggan dari solusi, mengembalikan objek Node-nya.
-        Dipakai oleh DESTROY operator.
-        """
+        """Mengeluarkan satu pelanggan dari solusi secara cepat."""
         for rute in self.daftar_rute:
-            for i, v in enumerate(rute.daftar_visit):
-                if v.nomor == nomor:
-                    return rute.keluarkan_di(i)
+            try:
+                posisi = rute.node_ids.index(nomor)
+                return rute.keluarkan_di(posisi)
+            except ValueError:
+                continue
         raise KeyError(f"Pelanggan {nomor} tidak ada dalam solusi.")
 
     def nomor_pelanggan(self):
         """Semua nomor pelanggan yang sedang ada di dalam solusi."""
-        return [v.nomor for r in self.daftar_rute for v in r.daftar_visit]
+        return [node_id for r in self.daftar_rute for node_id in r.node_ids]
 
-    def hemat_bila_dikeluarkan(self, nomor):
-        """
-        Berapa jarak yang DIHEMAT bila pelanggan ini dikeluarkan?
-
-            hemat = d(sebelum, ini) + d(ini, sesudah) - d(sebelum, sesudah)
-
-        Dipakai oleh WORST REMOVAL untuk mencari pelanggan paling "mahal".
-        """
-        depot = self.instance.depot.nomor
+    def hemat_bila_dikeluarkan(self, node_nomor):
+    # Cari rute yang memuat node_nomor
         for rute in self.daftar_rute:
-            urutan = rute.nomor_node()
-            if nomor in urutan:
-                i = urutan.index(nomor)
-                sebelum = depot if i == 0 else urutan[i - 1]
-                sesudah = depot if i == len(urutan) - 1 else urutan[i + 1]
-                return (self.instance.jarak(sebelum, nomor)
-                        + self.instance.jarak(nomor, sesudah)
-                        - self.instance.jarak(sebelum, sesudah))
-        raise KeyError(f"Pelanggan {nomor} tidak ada dalam solusi.")
+            if node_nomor in rute.node_ids:
+            # Dapatkan posisi langsung tanpa scanning index berulang
+                pos = rute.node_ids.index(node_nomor)
+                depot = self.instance.depot.nomor
+                d = self.instance.jarak
+            
+                sebelum = depot if pos == 0 else rute.node_ids[pos - 1]
+                sesudah = depot if pos == len(rute.node_ids) - 1 else rute.node_ids[pos + 1]
+            
+            # Hemat = jarak lama yang dihapus - jarak baru yang terbentuk
+                return d(sebelum, node_nomor) + d(node_nomor, sesudah) - d(sebelum, sesudah)
+        return 0.0
 
     def siapkan_armada(self):
-        """
-        Memastikan jumlah rute selalu sama dengan jumlah kendaraan.
-
-        Selama ALNS berjalan, rute kosong TIDAK dibuang. Repair operator
-        membutuhkannya sebagai "truk cadangan" yang masih kosong.
-        """
+        """Memastikan jumlah rute selalu sama dengan jumlah kendaraan."""
         while len(self.daftar_rute) < self.instance.jumlah_kendaraan:
             self.rute_baru()
 

@@ -1,73 +1,77 @@
-"""
-baca_data.py  —  TAHAP 4
-===============================================================================
-Membaca file instance .vrp dan mengubahnya menjadi banyak objek Node.
+"""baca_data.py — TAHAP 4 (DIPERBAIKI)
 
-Di tahap ini kita pakai FUNGSI biasa dulu, belum kelas. Tujuannya supaya
-terlihat jelas: kelas hanya dipakai kalau memang ada gunanya.
-===============================================================================
+Membaca file instance .vrp (kompatibel penuh dengan Set A dan Set X).
 """
 
+import os
+import re
 from node import Node
 
 
 def baca_instance(path):
-    """
-    Membaca file .vrp.
+  """Membaca file .vrp.
 
-    Mengembalikan TIGA hal sekaligus:
-        daftar_node, kapasitas, jumlah_kendaraan
-    """
-    koordinat = {}          # nomor -> (x, y)
-    permintaan = {}         # nomor -> demand
-    kapasitas = 0
-    jumlah_kendaraan = 0
-    bagian = None           # penanda: sedang membaca bagian apa
+  Mengembalikan TIGA hal: daftar_node, kapasitas, jumlah_kendaraan
+  """
+  koordinat = {}
+  permintaan = {}
+  kapasitas = 0
+  jumlah_kendaraan = 0
+  bagian = None
 
-    with open(path, "r") as f:
-        for baris in f:
-            baris = baris.strip()
-            if not baris:
-                continue
+  # Ambil cadangan nilai k langsung dari nama file jika di header bermasalah
+  nama_file = os.path.basename(path)
+  match_k_file = re.search(r"-k(\d+)", nama_file)
+  if match_k_file:
+    jumlah_kendaraan = int(match_k_file.group(1))
 
-            # --- deteksi pergantian bagian ---------------------------
-            if baris.startswith("NODE_COORD_SECTION"):
-                bagian = "KOORDINAT"
-                continue
-            if baris.startswith("DEMAND_SECTION"):
-                bagian = "DEMAND"
-                continue
-            if baris.startswith("DEPOT_SECTION"):
-                bagian = None
-                continue
-            if baris.startswith("EOF"):
-                break
+  with open(path, "r", encoding="utf-8", errors="ignore") as f:
+    for baris in f:
+      baris = baris.strip()
+      if not baris:
+        continue
 
-            # --- bagian judul, bentuknya "KUNCI : NILAI" -------------
-            if ":" in baris:
-                kunci, nilai = baris.split(":", 1)
-                kunci, nilai = kunci.strip(), nilai.strip()
-                if kunci == "CAPACITY":
-                    kapasitas = int(nilai)
-                elif kunci == "NAME":
-                    # nama file berbentuk A-n32-k5, huruf k menandakan
-                    # jumlah kendaraan
-                    jumlah_kendaraan = int(nilai.split("-k")[1])
-                continue
+      # --- deteksi pergantian bagian ---------------------------
+      if baris.startswith("NODE_COORD_SECTION"):
+        bagian = "KOORDINAT"
+        continue
+      if baris.startswith("DEMAND_SECTION"):
+        bagian = "DEMAND"
+        continue
+      if baris.startswith("DEPOT_SECTION"):
+        bagian = None
+        continue
+      if baris.startswith("EOF"):
+        break
 
-            # --- isi bagian ------------------------------------------
-            potongan = baris.split()
-            if bagian == "KOORDINAT":
-                nomor = int(potongan[0])
-                koordinat[nomor] = (int(potongan[1]), int(potongan[2]))
-            elif bagian == "DEMAND":
-                nomor = int(potongan[0])
-                permintaan[nomor] = int(potongan[1])
+      # --- bagian header/judul ---------------------------------
+      if ":" in baris and bagian is None:
+        kunci, nilai = baris.split(":", 1)
+        kunci = kunci.strip()
+        nilai = nilai.strip()
 
-    # --- ubah menjadi objek Node ---------------------------------------
-    daftar_node = []
-    for nomor in sorted(koordinat):
-        x, y = koordinat[nomor]
-        daftar_node.append(Node(nomor, x, y, permintaan[nomor]))
+        if kunci == "CAPACITY":
+          kapasitas = int(re.findall(r"\d+", nilai)[0])
+        elif kunci == "NAME":
+          match_k = re.search(r"-k(\d+)", nilai)
+          if match_k:
+            jumlah_kendaraan = int(match_k.group(1))
+        continue
 
-    return daftar_node, kapasitas, jumlah_kendaraan
+      # --- isi data numerik ------------------------------------
+      potongan = baris.split()
+      if bagian == "KOORDINAT" and len(potongan) >= 3:
+        nomor = int(potongan[0])
+        koordinat[nomor] = (int(potongan[1]), int(potongan[2]))
+      elif bagian == "DEMAND" and len(potongan) >= 2:
+        nomor = int(potongan[0])
+        permintaan[nomor] = int(potongan[1])
+
+  # --- ubah menjadi objek Node ---------------------------------
+  daftar_node = []
+  for nomor in sorted(koordinat.keys()):
+    x, y = koordinat[nomor]
+    demand = permintaan.get(nomor, 0)
+    daftar_node.append(Node(nomor, x, y, demand))
+
+  return daftar_node, kapasitas, jumlah_kendaraan
