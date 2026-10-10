@@ -35,9 +35,9 @@ class CVRPInstance:
         # 2. Precompute matriks jarak O(1)
         max_id = max(self.node_dict.keys())
         self.matrix_jarak = [[0] * (max_id + 1) for _ in range(max_id + 1)]
-        for u in self.daftar_node:
-            for v in self.daftar_node:
-                self.matrix_jarak[u.nomor][v.nomor] = u.jarak_ke(v)
+        for a in daftar_node:
+            for b in daftar_node:
+                self.matrix_jarak[a.nomor][b.nomor] = a.jarak_ke(b)
 
     def ambil_node(self, nomor):
         return self.node_dict[nomor]

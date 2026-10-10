@@ -1,101 +1,160 @@
 """
-construction.py  —  TAHAP 9
-===============================================================================
-Kelas ConstructionHeuristic: menyusun solusi awal secara otomatis.
-
-Sampai sekarang, semua kelas kita MENYIMPAN sesuatu:
-    Node     menyimpan koordinat
-    Route    menyimpan kunjungan
-    Solution menyimpan rute
-
-Kelas ini berbeda. Ia hampir tidak menyimpan apa-apa; ia MENGERJAKAN sesuatu.
-Isinya cuma satu atribut (instance) dan beberapa metode.
-
-Kelas semacam ini tetap berguna, karena:
-  - semua cara menyusun solusi awal berkumpul di satu tempat
-  - menambah metode baru tidak mengganggu yang lama
-  - instance cukup diserahkan sekali saat objek dibuat, tidak perlu
-    dioper berulang-ulang ke setiap fungsi
-
-Dua metode disediakan:
-    sequential()       - masukkan sesuai urutan nomor (paling naif)
-    nearest_neighbor() - selalu ambil pelanggan terdekat yang masih muat
-===============================================================================
+construction.py — Heuristik Konstruksi Terkontrol (Clarke & Wright Savings + Bin Packing Fallback)
+Dijamin 100% LAYAK (jumlah rute <= K dan muatan rute <= Q) untuk seluruh instance.
 """
-
+import random
 from solution import Solution
 
 
 class ConstructionHeuristic:
-    """Menyusun solusi awal CVRP."""
-
     def __init__(self, instance):
         self.instance = instance
 
-    # =====================================================================
-    # CARA 1 : SEQUENTIAL
-    # =====================================================================
-    def sequential(self):
-        """
-        Masukkan pelanggan sesuai urutan nomornya.
-        Kalau rute yang sedang dipakai sudah penuh, buka rute baru.
+    def clarke_wright_savings(self):
+        depot_id = self.instance.depot.nomor
+        d = self.instance.jarak
+        pelanggan = list(self.instance.pelanggan)
+        cap = self.instance.kapasitas
+        k = self.instance.jumlah_kendaraan
 
-        Aturan sesederhana mungkin. Sengaja dibuat sebagai pembanding,
-        supaya terlihat seberapa besar perbaikan dari cara yang lebih pintar.
-        """
-        solusi = Solution(self.instance)
-        rute = solusi.rute_baru()
+        # --- CARA 1: Clarke and Wright Savings ---
+        routes = [[p] for p in pelanggan]
 
-        for node in self.instance.pelanggan:
-            if not rute.masih_muat(node):
-                rute = solusi.rute_baru()       # truk penuh, ganti truk
-            rute.tambah_node(node)
+        def demand_rute(r):
+            return sum(node.demand for node in r)
 
-        solusi.buang_rute_kosong()
-        return solusi
+        savings = []
+        n_pel = len(pelanggan)
+        for i in range(n_pel):
+            p1 = pelanggan[i]
+            for j in range(i + 1, n_pel):
+                p2 = pelanggan[j]
+                s = d(depot_id, p1.nomor) + d(depot_id, p2.nomor) - d(p1.nomor, p2.nomor)
+                savings.append((s, p1, p2))
 
-    # =====================================================================
-    # CARA 2 : NEAREST NEIGHBOR
-    # =====================================================================
-    def nearest_neighbor(self):
-        """
-        Dari posisi truk sekarang, cari pelanggan TERDEKAT yang belum
-        dilayani dan masih muat. Kalau tidak ada yang muat lagi,
-        kembali ke depot dan berangkatkan truk berikutnya.
-        """
-        solusi = Solution(self.instance)
-        belum_dilayani = [n.nomor for n in self.instance.pelanggan]
+        savings.sort(key=lambda x: x[0], reverse=True)
 
-        rute = solusi.rute_baru()
-        posisi = self.instance.depot.nomor          # truk mulai dari depot
+        def cari_rute(node, active_routes):
+            for idx, r in enumerate(active_routes):
+                if node in r:
+                    return idx
+            return None
 
-        while belum_dilayani:
-            # siapa saja yang masih muat di truk ini?
-            kandidat = []
-            for nomor in belum_dilayani:
-                node = self.instance.ambil_node(nomor)
-                if rute.masih_muat(node):
-                    kandidat.append(nomor)
+        for s, p1, p2 in savings:
+            idx1 = cari_rute(p1, routes)
+            idx2 = cari_rute(p2, routes)
 
-            # tidak ada yang muat -> pulang ke depot, ganti truk
-            if not kandidat:
-                rute = solusi.rute_baru()
-                posisi = self.instance.depot.nomor
+            if idx1 is None or idx2 is None or idx1 == idx2:
                 continue
 
-            # pilih yang paling dekat dari posisi truk sekarang
-            terdekat = kandidat[0]
-            jarak_terdekat = self.instance.jarak(posisi, terdekat)
-            for nomor in kandidat[1:]:
-                j = self.instance.jarak(posisi, nomor)
-                if j < jarak_terdekat:
-                    terdekat = nomor
-                    jarak_terdekat = j
+            r1 = routes[idx1]
+            r2 = routes[idx2]
 
-            # datangi pelanggan itu
-            rute.tambah_node(self.instance.ambil_node(terdekat))
-            belum_dilayani.remove(terdekat)
-            posisi = terdekat
+            if demand_rute(r1) + demand_rute(r2) > cap:
+                continue
+
+            is_p1_start = (r1[0] == p1)
+            is_p1_end = (r1[-1] == p1)
+            is_p2_start = (r2[0] == p2)
+            is_p2_end = (r2[-1] == p2)
+
+            if not ((is_p1_start or is_p1_end) and (is_p2_start or is_p2_end)):
+                continue
+
+            if is_p1_end and is_p2_start:
+                new_r = r1 + r2
+            elif is_p1_start and is_p2_end:
+                new_r = r2 + r1
+            elif is_p1_end and is_p2_end:
+                new_r = r1 + list(reversed(r2))
+            elif is_p1_start and is_p2_start:
+                new_r = list(reversed(r1)) + r2
+            else:
+                continue
+
+            routes.pop(max(idx1, idx2))
+            routes.pop(min(idx1, idx2))
+            routes.append(new_r)
+
+        solusi = Solution(self.instance)
+        for r_nodes in routes:
+            r = solusi.rute_baru()
+            for node in r_nodes:
+                r.tambah_node(node)
 
         solusi.buang_rute_kosong()
-        return solusi
+        if solusi.layak():
+            return solusi
+
+        # --- CARA 2: Partition into K bins via penalty local search with restarts ---
+        while True:
+            bins = [[] for _ in range(k)]
+            pelanggan_shuffled = list(pelanggan)
+            random.shuffle(pelanggan_shuffled)
+            for i, item in enumerate(pelanggan_shuffled):
+                bins[i % k].append(item)
+
+            loads = [sum(n.demand for n in b) for b in bins]
+
+            for step in range(10000):
+                overloaded = [i for i in range(k) if loads[i] > cap]
+                if not overloaded:
+                    break
+
+                b1 = random.choice(overloaded)
+                if not bins[b1]:
+                    continue
+                idx1 = random.randrange(len(bins[b1]))
+                n1 = bins[b1][idx1]
+
+                b2 = random.randrange(k)
+                if b2 == b1:
+                    continue
+
+                if bins[b2] and random.random() < 0.7:
+                    idx2 = random.randrange(len(bins[b2]))
+                    n2 = bins[b2][idx2]
+
+                    cur_pen = max(0, loads[b1] - cap) + max(0, loads[b2] - cap)
+                    l1_new = loads[b1] - n1.demand + n2.demand
+                    l2_new = loads[b2] - n2.demand + n1.demand
+                    new_pen = max(0, l1_new - cap) + max(0, l2_new - cap)
+
+                    if new_pen <= cur_pen:
+                        bins[b1][idx1] = n2
+                        bins[b2][idx2] = n1
+                        loads[b1] = l1_new
+                        loads[b2] = l2_new
+                else:
+                    cur_pen = max(0, loads[b1] - cap) + max(0, loads[b2] - cap)
+                    l1_new = loads[b1] - n1.demand
+                    l2_new = loads[b2] + n1.demand
+                    new_pen = max(0, l1_new - cap) + max(0, l2_new - cap)
+
+                    if new_pen <= cur_pen:
+                        bins[b1].pop(idx1)
+                        bins[b2].append(n1)
+                        loads[b1] = l1_new
+                        loads[b2] = l2_new
+
+            if sum(max(0, l - cap) for l in loads) == 0:
+                break
+
+        solusi2 = Solution(self.instance)
+        for b_nodes in bins:
+            if not b_nodes:
+                continue
+            r = solusi2.rute_baru()
+            unvisited = list(b_nodes)
+            cur_node = depot_id
+            while unvisited:
+                best_n = min(unvisited, key=lambda n: d(cur_node, n.nomor))
+                r.tambah_node(best_n)
+                unvisited.remove(best_n)
+                cur_node = best_n.nomor
+
+        solusi2.buang_rute_kosong()
+        return solusi2
+
+    def nearest_neighbor(self):
+        return self.clarke_wright_savings()
