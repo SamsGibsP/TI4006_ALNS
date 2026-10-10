@@ -57,6 +57,8 @@ waktu = time.time() - mulai
 print("=" * 72)
 print(f"  Waktu: {waktu:.1f} detik, diterima "
       f"{pencari.jumlah_diterima} iterasi")
+print(f"  Reheating: {pencari.jumlah_reheat} kali | "
+      f"local search: {pencari.jumlah_local_search} kali")
 print("=" * 72)
 
 print()
@@ -99,6 +101,12 @@ for nama in semua:
         peluang = pencari.bobot_repair[nama] / tr * 100
     print(f"    {nama:<20} peluang {peluang:>5.1f}% | "
           f"dipakai {pencari.pemakaian[nama]:>5} kali")
+
+print("\n  Lima pasangan dengan bobot tertinggi:")
+for (nama_d, nama_r), bobot in sorted(
+        pencari.bobot_pasangan.items(), key=lambda item: item[1],
+        reverse=True)[:5]:
+    print(f"    {nama_d:<16} + {nama_r:<18} | bobot {bobot:>7.3f}")
 
 print("""
   Dua hal yang layak diperhatikan:

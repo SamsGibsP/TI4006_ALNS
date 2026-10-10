@@ -66,6 +66,7 @@ import math
 import random
 
 from destroy import DestroyOperator
+from local_search import LocalSearch
 from repair import RepairOperator
 
 
@@ -77,6 +78,9 @@ class ALNS:
                  suhu_awal=100.0, laju_pendinginan=0.995,
                  sigma1=33.0, sigma2=9.0, sigma3=13.0,
                  reaction_factor=0.3, panjang_segmen=100,
+                 tingkat_noise=0.10, stagnasi_reheat=250,
+                 faktor_reheat=0.50, gunakan_local_search=True,
+                 iterasi_local_search=3, batas_stagnasi=None,
                  tampilkan_setiap=100):
         self.instance = instance
         self.maks_iterasi = maks_iterasi
@@ -95,16 +99,40 @@ class ALNS:
         self.reaction_factor = reaction_factor  # r
         self.panjang_segmen = panjang_segmen
 
+        # Modifikasi lanjutan: noise, reheating, polishing, early stopping.
+        self.tingkat_noise = tingkat_noise
+        self.stagnasi_reheat = stagnasi_reheat
+        self.faktor_reheat = faktor_reheat
+        self.gunakan_local_search = gunakan_local_search
+        self.iterasi_local_search = iterasi_local_search
+        self.batas_stagnasi = batas_stagnasi
+
+        if not 0 <= reaction_factor <= 1:
+            raise ValueError("reaction_factor harus di antara 0 dan 1")
+        if panjang_segmen <= 0 or maks_iterasi <= 0:
+            raise ValueError("panjang_segmen dan maks_iterasi harus positif")
+        if not 0 < laju_pendinginan <= 1:
+            raise ValueError("laju_pendinginan harus di antara 0 dan 1")
+
         self.tampilkan_setiap = tampilkan_setiap
 
         self.perusak = DestroyOperator(instance)
-        self.pembaik = RepairOperator(instance)
+        self.pembaik = RepairOperator(instance, tingkat_noise)
+        self.local_search = LocalSearch(
+            instance, maks_iterasi=iterasi_local_search, verbose=False)
 
         # --- bobot operator (BARU di Tahap 18) ---------------------------
         # Pada M6 ditulis rho- untuk destroy dan rho+ untuk repair.
         # Keduanya dimulai dari 1, artinya semua operator sama rata.
         self.bobot_destroy = {n: 1.0 for n in DestroyOperator.DAFTAR}
         self.bobot_repair = {n: 1.0 for n in RepairOperator.DAFTAR}
+
+        # Bobot dipelajari untuk PASANGAN operator. Interaksi tertentu
+        # (mis. Shaw + regret-3) bisa bagus walau operatornya sendiri biasa.
+        self.bobot_pasangan = {
+            (d, r): 1.0 for d in DestroyOperator.DAFTAR
+            for r in RepairOperator.DAFTAR
+        }
 
         # berapa kali tiap operator dipakai, untuk analisis
         self.pemakaian = {n: 0 for n in
@@ -130,6 +158,9 @@ class ALNS:
         self.jumlah_sama = 0            # f(S') = f(S)  (langkah menyamping)
         self.jumlah_lebih_buruk = 0     # f(S') > f(S)  tapi tetap diterima
         self.iterasi_rekor = 0
+        self.jumlah_reheat = 0
+        self.jumlah_local_search = 0
+        self.iterasi_dijalankan = 0
 
     # =====================================================================
     @staticmethod
@@ -149,9 +180,8 @@ class ALNS:
     # =====================================================================
     def reset_segmen(self):
         """Mengosongkan skor dan hitungan percobaan di awal tiap segmen."""
-        semua = DestroyOperator.DAFTAR + RepairOperator.DAFTAR
-        self.skor = {n: 0.0 for n in semua}
-        self.percobaan = {n: 0 for n in semua}
+        self.skor = {p: 0.0 for p in self.bobot_pasangan}
+        self.percobaan = {p: 0 for p in self.bobot_pasangan}
 
     def perbarui_bobot(self):
         """
@@ -162,20 +192,26 @@ class ALNS:
         Operator yang tidak pernah dipakai pada segmen ini (theta = 0)
         bobotnya dibiarkan apa adanya — tidak ada bukti baru tentang dia.
         """
-        for bobot in (self.bobot_destroy, self.bobot_repair):
-            for nama in bobot:
-                theta = self.percobaan[nama]
-                if theta == 0:
-                    continue
-                rata_skor = self.skor[nama] / theta
-                bobot[nama] = (bobot[nama] * (1 - self.reaction_factor)
-                               + self.reaction_factor * rata_skor)
-                bobot[nama] = max(bobot[nama], 0.01)   # jangan sampai nol
+        for pasangan in self.bobot_pasangan:
+            theta = self.percobaan[pasangan]
+            if theta:
+                rata_skor = self.skor[pasangan] / theta
+                lama = self.bobot_pasangan[pasangan]
+                self.bobot_pasangan[pasangan] = max(
+                    lama * (1 - self.reaction_factor)
+                    + self.reaction_factor * rata_skor, 0.01)
+
+        # Marginal dipertahankan agar laporan lama tetap kompatibel.
+        for d in self.bobot_destroy:
+            self.bobot_destroy[d] = sum(
+                w for (pd, _), w in self.bobot_pasangan.items() if pd == d)
+        for r in self.bobot_repair:
+            self.bobot_repair[r] = sum(
+                w for (_, pr), w in self.bobot_pasangan.items() if pr == r)
 
     def beri_skor(self, nama_d, nama_r, nilai):
         """Menambahkan skor ke pasangan operator yang baru saja dipakai."""
-        self.skor[nama_d] += nilai
-        self.skor[nama_r] += nilai
+        self.skor[(nama_d, nama_r)] += nilai
 
     # =====================================================================
     # LANGKAH 5 : MEMILIH OPERATOR DENGAN ROULETTE WHEEL
@@ -254,6 +290,19 @@ class ALNS:
         self.suhu = self.suhu_awal
         self.reset_segmen()
         self.pernah_dikunjungi = {self.tanda_solusi(x)}
+        stagnasi = 0
+        self.jumlah_reheat = 0
+        self.jumlah_local_search = 0
+        self.iterasi_dijalankan = 0
+        self.jumlah_diterima = 0
+        self.jumlah_gagal = 0
+        self.jumlah_lebih_baik = 0
+        self.jumlah_sama = 0
+        self.jumlah_lebih_buruk = 0
+        self.iterasi_rekor = 0
+        self.riwayat_terbaik = []
+        self.riwayat_bobot = []
+        self.pemakaian = {n: 0 for n in self.pemakaian}
 
         if self.tampilkan_setiap:
             print(f"  Iterasi     0 | sekarang {x.total_jarak:>5} "
@@ -263,14 +312,12 @@ class ALNS:
         for iterasi in range(1, self.maks_iterasi + 1):
 
             # langkah 5 : pilih operator lewat roulette wheel
-            nama_d = self.putar_roda(self.bobot_destroy)
-            nama_r = self.putar_roda(self.bobot_repair)
+            nama_d, nama_r = self.putar_roda(self.bobot_pasangan)
             rho = random.randint(self.rho_min, self.rho_maks)
 
             self.pemakaian[nama_d] += 1
             self.pemakaian[nama_r] += 1
-            self.percobaan[nama_d] += 1        # theta
-            self.percobaan[nama_r] += 1
+            self.percobaan[(nama_d, nama_r)] += 1
 
             # langkah 4 : destroy
             kandidat = x.copy()
@@ -279,40 +326,47 @@ class ALNS:
             # langkah 5 : repair
             berhasil = self.pembaik.jalankan(nama_r, kandidat, bank)
             if not berhasil:
-                # ada pelanggan yang tidak muat di mana pun -> buang iterasi ini
                 self.jumlah_gagal += 1
-                continue
+            else:
+                # Local search hanya dipanggil untuk calon rekor agar biaya
+                # komputasinya terkendali.
+                if (self.gunakan_local_search
+                        and kandidat.total_jarak < x_terbaik.total_jarak):
+                    kandidat = self.local_search.jalankan(kandidat)
+                    kandidat.siapkan_armada()
+                    self.jumlah_local_search += 1
 
-            # --- tentukan skor sesuai aturan M6 --------------------------
-            tanda = self.tanda_solusi(kandidat)
-            baru = tanda not in self.pernah_dikunjungi
-            self.pernah_dikunjungi.add(tanda)
+                tanda = self.tanda_solusi(kandidat)
+                baru = tanda not in self.pernah_dikunjungi
+                self.pernah_dikunjungi.add(tanda)
+                diterima = self.terima(x.total_jarak, kandidat.total_jarak)
+                lebih_baik = kandidat.total_jarak < x.total_jarak
 
-            # langkah 6-7 : keputusan penerimaan
-            diterima = self.terima(x.total_jarak, kandidat.total_jarak)
-            lebih_baik = kandidat.total_jarak < x.total_jarak
+                if kandidat.total_jarak < x_terbaik.total_jarak and baru:
+                    self.beri_skor(nama_d, nama_r, self.sigma1)
+                elif lebih_baik and diterima and baru:
+                    self.beri_skor(nama_d, nama_r, self.sigma2)
+                elif diterima and baru:
+                    self.beri_skor(nama_d, nama_r, self.sigma3)
 
-            if kandidat.total_jarak < x_terbaik.total_jarak and baru:
-                self.beri_skor(nama_d, nama_r, self.sigma1)    # rekor global
-            elif lebih_baik and diterima and baru:
-                self.beri_skor(nama_d, nama_r, self.sigma2)    # lebih baik
-            elif diterima and baru:
-                self.beri_skor(nama_d, nama_r, self.sigma3)    # diterima
-            # solusi yang sudah pernah dikunjungi: tidak diberi skor
+                if diterima:
+                    x = kandidat
+                    self.jumlah_diterima += 1
 
-            if diterima:
-                x = kandidat
-                self.jumlah_diterima += 1
+                if x.total_jarak < x_terbaik.total_jarak:
+                    x_terbaik = x.copy()
+                    self.iterasi_rekor = iterasi
+                    stagnasi = 0
+                    if self.tampilkan_setiap:
+                        print(f"  Iterasi {iterasi:>5} | sekarang "
+                              f"{x.total_jarak:>5} | terbaik "
+                              f"{x_terbaik.total_jarak:>5} | REKOR BARU "
+                              f"({nama_d[:6]}+{nama_r[:6]})")
+                else:
+                    stagnasi += 1
 
-            # langkah 8-9 : catat bila ini rekor baru
-            if x.total_jarak < x_terbaik.total_jarak:
-                x_terbaik = x.copy()
-                self.iterasi_rekor = iterasi
-                if self.tampilkan_setiap:
-                    print(f"  Iterasi {iterasi:>5} | sekarang "
-                          f"{x.total_jarak:>5} | terbaik "
-                          f"{x_terbaik.total_jarak:>5} | REKOR BARU "
-                          f"({nama_d[:6]}+{nama_r[:6]})")
+            if not berhasil:
+                stagnasi += 1
 
             # --- akhir segmen: perbarui bobot (BARU di Tahap 19) ---------
             if iterasi % self.panjang_segmen == 0:
@@ -324,13 +378,24 @@ class ALNS:
             # --- dinginkan suhu (BARU di Tahap 17) -----------------------
             self.suhu = self.suhu * self.laju_pendinginan
 
+            # Reheating berkala mengembalikan kemampuan eksplorasi tanpa
+            # pernah melampaui suhu awal.
+            if (self.stagnasi_reheat and stagnasi > 0
+                    and stagnasi % self.stagnasi_reheat == 0):
+                self.suhu = max(self.suhu, self.suhu_awal * self.faktor_reheat)
+                self.jumlah_reheat += 1
+
             self.riwayat_terbaik.append(x_terbaik.total_jarak)
+            self.iterasi_dijalankan = iterasi
 
             if (self.tampilkan_setiap
                     and iterasi % self.tampilkan_setiap == 0):
                 print(f"  Iterasi {iterasi:>5} | sekarang {x.total_jarak:>5} "
                       f"| terbaik {x_terbaik.total_jarak:>5} "
                       f"| suhu {self.suhu:>7.2f}")
+
+            if self.batas_stagnasi and stagnasi >= self.batas_stagnasi:
+                break
 
         # langkah 10
         x_terbaik.buang_rute_kosong()

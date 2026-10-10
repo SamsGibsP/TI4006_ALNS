@@ -26,6 +26,13 @@ class DestroyOperator:
 
     def __init__(self, instance):
         self.instance = instance
+        # Dinormalisasi sekali saja; menghitung O(n^2) di setiap iterasi
+        # akan mahal pada instance besar.
+        self.maksimum_jarak = max(
+            (instance.jarak(a.nomor, b.nomor)
+             for a in instance.pelanggan for b in instance.pelanggan),
+            default=1,
+        ) or 1
 
     # =====================================================================
     # OPERATOR 1 : RANDOM REMOVAL
@@ -85,6 +92,45 @@ class DestroyOperator:
         return bank
 
     # =====================================================================
+    # OPERATOR 3 : SHAW REMOVAL / RELATED REMOVAL
+    # =====================================================================
+    def shaw_removal(self, solusi, rho):
+        """Keluarkan pelanggan yang saling berdekatan dan mirip demand-nya.
+
+        Satu pelanggan dipilih acak sebagai benih. Pelanggan berikutnya
+        dipilih dari yang paling *related* terhadap salah satu pelanggan
+        yang telah dikeluarkan. Pangkat acak membuat operator tetap punya
+        diversifikasi, seperti Shaw removal klasik.
+        """
+        kandidat = solusi.nomor_pelanggan()
+        rho = min(rho, len(kandidat))
+        if not kandidat:
+            return []
+
+        kapasitas = self.instance.kapasitas or 1
+
+        terpilih = [random.choice(kandidat)]
+        kandidat.remove(terpilih[0])
+        while kandidat and len(terpilih) < rho:
+            acuan = random.choice(terpilih)
+            node_acuan = self.instance.ambil_node(acuan)
+
+            def relatedness(nomor):
+                node = self.instance.ambil_node(nomor)
+                spasial = (self.instance.jarak(acuan, nomor)
+                           / self.maksimum_jarak)
+                demand = abs(node_acuan.demand - node.demand) / kapasitas
+                return spasial + 0.5 * demand
+
+            urut = sorted(kandidat, key=relatedness)
+            indeks = int((random.random() ** 6) * len(urut))
+            berikutnya = urut[indeks]
+            terpilih.append(berikutnya)
+            kandidat.remove(berikutnya)
+
+        return [solusi.keluarkan(nomor) for nomor in terpilih]
+
+    # =====================================================================
     # PEMILIH OPERATOR
     # =====================================================================
     def jalankan(self, nama, solusi, rho):
@@ -93,7 +139,9 @@ class DestroyOperator:
             return self.random_removal(solusi, rho)
         if nama == "worst_removal":
             return self.worst_removal(solusi, rho)
+        if nama == "shaw_removal":
+            return self.shaw_removal(solusi, rho)
         raise ValueError(f"Destroy operator tidak dikenal: {nama}")
 
     # daftar nama operator yang tersedia
-    DAFTAR = ["random_removal", "worst_removal"]
+    DAFTAR = ["random_removal", "worst_removal", "shaw_removal"]

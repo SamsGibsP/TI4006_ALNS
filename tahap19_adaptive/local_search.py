@@ -25,10 +25,11 @@ Relocate dicoba lebih dulu. Swap baru dipakai kalau relocate sudah buntu.
 class LocalSearch:
     """Memperbaiki solusi dengan perubahan-perubahan kecil."""
 
-    def __init__(self, instance, operator=None, maks_iterasi=100):
+    def __init__(self, instance, operator=None, maks_iterasi=100, verbose=True):
         self.instance = instance
         self.operator = operator if operator else ["relocate", "swap"]
         self.maks_iterasi = maks_iterasi
+        self.verbose = verbose
         self.jumlah_iterasi = 0
         self.riwayat = []          # catatan jarak tiap iterasi
 
@@ -43,7 +44,8 @@ class LocalSearch:
         """
         solusi = solusi_awal.copy()          # <-- inilah gunanya Tahap 10
         self.riwayat = [solusi.total_jarak]
-        print(f"  Iterasi  0 | jarak {solusi.total_jarak:>5} | solusi awal")
+        if self.verbose:
+            print(f"  Iterasi  0 | jarak {solusi.total_jarak:>5} | solusi awal")
 
         for iterasi in range(1, self.maks_iterasi + 1):
             jarak_sebelum = solusi.total_jarak
@@ -59,15 +61,17 @@ class LocalSearch:
                     break
 
             if not ada_perbaikan:
-                print(f"  Iterasi {iterasi:>2} | tidak ada perbaikan lagi "
-                      f"-> OPTIMUM LOKAL")
+                if self.verbose:
+                    print(f"  Iterasi {iterasi:>2} | tidak ada perbaikan lagi "
+                          f"-> OPTIMUM LOKAL")
                 self.jumlah_iterasi = iterasi - 1
                 break
 
             turun = jarak_sebelum - solusi.total_jarak
             self.riwayat.append(solusi.total_jarak)
-            print(f"  Iterasi {iterasi:>2} | jarak {solusi.total_jarak:>5} "
-                  f"| turun {turun:>4} | {nama}")
+            if self.verbose:
+                print(f"  Iterasi {iterasi:>2} | jarak {solusi.total_jarak:>5} "
+                      f"| turun {turun:>4} | {nama}")
 
         solusi.buang_rute_kosong()
         return solusi

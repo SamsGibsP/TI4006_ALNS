@@ -24,14 +24,20 @@ Istilah REGRET (penyesalan):
 ===============================================================================
 """
 
+import random
+
 from visit import Visit
 
 
 class RepairOperator:
     """Kumpulan cara memperbaiki solusi yang rusak."""
 
-    def __init__(self, instance):
+    def __init__(self, instance, tingkat_noise=0.0):
         self.instance = instance
+        self.tingkat_noise = tingkat_noise
+        self.skala_noise = max(
+            (instance.jarak(instance.depot.nomor, n.nomor)
+             for n in instance.pelanggan), default=1)
 
     # =====================================================================
     # ALAT BANTU : menilai semua kemungkinan penyisipan satu pelanggan
@@ -45,7 +51,10 @@ class RepairOperator:
         for i, rute in enumerate(solusi.daftar_rute):
             posisi, biaya = rute.sisip_terbaik(node)
             if posisi is not None:
-                pilihan.append((biaya, i, posisi))
+                # Noise hanya memengaruhi pemilihan, bukan jarak sebenarnya.
+                nilai = biaya + random.uniform(-1.0, 1.0) * \
+                    self.tingkat_noise * self.skala_noise
+                pilihan.append((nilai, i, posisi))
         pilihan.sort()
         return pilihan
 
@@ -100,6 +109,10 @@ class RepairOperator:
         Pelanggan yang hanya punya satu pilihan rute diberi regret tak
         hingga, karena dialah yang paling terancam.
         """
+        return self.regret_k_insertion(solusi, bank, 2)
+
+    def regret_k_insertion(self, solusi, bank, k):
+        """Regret-k; k=3 melihat tiga alternatif penyisipan terbaik."""
         sisa = list(bank)
 
         while sisa:
@@ -111,9 +124,8 @@ class RepairOperator:
                     continue
 
                 biaya_1, i_rute, posisi = pilihan[0]
-                if len(pilihan) >= 2:
-                    biaya_2 = pilihan[1][0]
-                    regret = biaya_2 - biaya_1
+                if len(pilihan) >= k:
+                    regret = sum(p[0] - biaya_1 for p in pilihan[1:k])
                 else:
                     regret = float("inf")   # cuma satu pilihan: genting!
 
@@ -129,6 +141,9 @@ class RepairOperator:
 
         return True
 
+    def regret3_insertion(self, solusi, bank):
+        return self.regret_k_insertion(solusi, bank, 3)
+
     # =====================================================================
     # PEMILIH OPERATOR
     # =====================================================================
@@ -138,6 +153,8 @@ class RepairOperator:
             return self.greedy_insertion(solusi, bank)
         if nama == "regret2_insertion":
             return self.regret2_insertion(solusi, bank)
+        if nama == "regret3_insertion":
+            return self.regret3_insertion(solusi, bank)
         raise ValueError(f"Repair operator tidak dikenal: {nama}")
 
-    DAFTAR = ["greedy_insertion", "regret2_insertion"]
+    DAFTAR = ["greedy_insertion", "regret2_insertion", "regret3_insertion"]
