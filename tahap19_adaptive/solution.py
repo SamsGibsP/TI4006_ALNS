@@ -55,6 +55,15 @@ class Solution:
         """Semua nomor pelanggan yang sudah masuk ke dalam rute."""
         return [node_id for r in self.rute_terisi() for node_id in r.node_ids]
 
+    @property
+    def rute(self):
+        """Daftar rute aktif / terisi (tidak kosong)."""
+        return self.rute_terisi()
+
+    def batas_armada_efektif(self):
+        """Mengembalikan batas maksimal armada instance asli jika ada."""
+        return self.instance.batas_armada
+
     # =====================================================================
     # MEMERIKSA KELAYAKAN
     # =====================================================================
@@ -62,7 +71,7 @@ class Solution:
         masalah = []
 
         # 1. Tiap rute terisi tidak boleh melebihi kapasitas
-        for i, r in enumerate(self.rute_terisi(), start=1):
+        for i, r in enumerate(self.rute, start=1):
             if r.total_muatan > self.instance.kapasitas:
                 masalah.append(f"Rute {i} kelebihan muatan: "
                                f"{r.total_muatan} > {self.instance.kapasitas}")
@@ -78,32 +87,32 @@ class Solution:
         if len(dikunjungi) != len(set(dikunjungi)):
             masalah.append("Ada pelanggan yang dikunjungi lebih dari sekali")
 
-        # 3. Jumlah rute terisi tidak boleh melebihi armada
-        rute_terisi = self.jumlah_rute_terisi()
-        if rute_terisi > self.instance.jumlah_kendaraan:
-            masalah.append(f"Butuh {rute_terisi} rute terisi, "
-                           f"armada hanya {self.instance.jumlah_kendaraan}")
+        # 3. Batas armada maksimum (hanya diperiksa jika batas_armada diset kaku)
+        rute_aktif = len(self.rute)
+        if self.instance.batas_armada is not None and rute_aktif > self.instance.batas_armada:
+            masalah.append(f"Butuh {rute_aktif} rute terisi, "
+                           f"armada maksimal {self.instance.batas_armada}")
 
         return masalah
 
     def layak(self):
-        # 1. Cek jumlah armada kendaraan (hanya rute yang terisi)
-        if len(self.rute_terisi()) > self.instance.jumlah_kendaraan:
+        # 1. Cek batas atas armada kendaraan jika ada batas kaku
+        if self.instance.batas_armada is not None and len(self.rute) > self.instance.batas_armada:
             return False
 
         # 2. Cek kapasitas tiap rute
-        for r in self.rute_terisi():
-            if r.total_muatan > self.instance.kapasitas:
+        cap = self.instance.kapasitas
+        for r in self.rute:
+            if r.total_muatan > cap:
                 return False
 
         # 3. Cek semua pelanggan terlayani tepat satu kali
         dikunjungi = []
-        for r in self.rute_terisi():
+        for r in self.rute:
             dikunjungi.extend(r.nomor_node())
 
-        if len(dikunjungi) != len(self.instance.pelanggan):
-            return False
-        if len(set(dikunjungi)) != len(self.instance.pelanggan):
+        n_pel = len(self.instance.pelanggan)
+        if len(dikunjungi) != n_pel or len(set(dikunjungi)) != n_pel:
             return False
 
         return True
@@ -134,24 +143,24 @@ class Solution:
         return [node_id for r in self.daftar_rute for node_id in r.node_ids]
 
     def hemat_bila_dikeluarkan(self, node_nomor):
-    # Cari rute yang memuat node_nomor
+        # Cari rute yang memuat node_nomor
         for rute in self.daftar_rute:
             if node_nomor in rute.node_ids:
-            # Dapatkan posisi langsung tanpa scanning index berulang
                 pos = rute.node_ids.index(node_nomor)
                 depot = self.instance.depot.nomor
-                d = self.instance.jarak
+                d = getattr(self.instance, "_matriks_jarak", self.instance.matrix_jarak)
             
                 sebelum = depot if pos == 0 else rute.node_ids[pos - 1]
                 sesudah = depot if pos == len(rute.node_ids) - 1 else rute.node_ids[pos + 1]
             
-            # Hemat = jarak lama yang dihapus - jarak baru yang terbentuk
-                return d(sebelum, node_nomor) + d(node_nomor, sesudah) - d(sebelum, sesudah)
+                # Hemat = jarak lama yang dihapus - jarak baru yang terbentuk O(1)
+                return d[sebelum][node_nomor] + d[node_nomor][sesudah] - d[sebelum][sesudah]
         return 0.0
 
     def siapkan_armada(self):
-        """Memastikan jumlah rute selalu sama dengan jumlah kendaraan."""
-        while len(self.daftar_rute) < self.instance.jumlah_kendaraan:
+        """Memastikan jumlah rute minimal mencukupi jumlah kendaraan instance."""
+        target_k = self.instance.jumlah_kendaraan
+        while len(self.daftar_rute) < target_k:
             self.rute_baru()
 
     def cetak(self, judul="SOLUSI"):
@@ -164,7 +173,7 @@ class Solution:
             print(f"              | "
                   f"{' - '.join(str(x) for x in r.nomor_node_lengkap())}")
         print("-" * 72)
-        print(f"  Jumlah rute : {self.jumlah_rute}/{self.instance.jumlah_kendaraan}")
+        print(f"  Jumlah rute : {self.jumlah_rute} (k min: {self.instance.jumlah_kendaraan})")
         print(f"  TOTAL JARAK : {self.total_jarak}")
 
         masalah = self.daftar_pelanggaran()
@@ -175,3 +184,32 @@ class Solution:
         else:
             print("  Status      : LAYAK")
         print("=" * 72)
+
+    def simpan_cvrplib_sol(self, path_file, sesuaikan_indeks_cvrplib=True):
+        """
+        Menyimpan solusi ke format standar CVRPLIB .sol:
+        Route #1: 31 46 35
+        Route #2: ...
+        Cost <total_jarak>
+
+        Pada instance Set X CVRPLIB, penomoran pelanggan di file .sol menggunakan
+        indeks 1..n-1 (yaitu nomor_node - 1 jika depot bernomor 1).
+        """
+        import os
+        dir_tujuan = os.path.dirname(os.path.abspath(path_file))
+        if dir_tujuan:
+            os.makedirs(dir_tujuan, exist_ok=True)
+
+        depot_id = self.instance.depot.nomor
+        with open(path_file, "w", encoding="utf-8") as f:
+            idx = 1
+            for r in self.rute:
+                if r.kosong():
+                    continue
+                if sesuaikan_indeks_cvrplib and depot_id == 1:
+                    nodes_str = " ".join(str(nid - 1) for nid in r.node_ids)
+                else:
+                    nodes_str = " ".join(str(nid) for nid in r.node_ids)
+                f.write(f"Route #{idx}: {nodes_str}\n")
+                idx += 1
+            f.write(f"Cost {self.total_jarak}\n")

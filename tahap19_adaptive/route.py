@@ -42,12 +42,13 @@ class Route:
             return
 
         depot = self.instance.depot.nomor
-        d = self.instance.jarak
+        d = getattr(self.instance, "_matriks_jarak", self.instance.matrix_jarak)
+        nodes = self.node_ids
 
-        jarak = d(depot, self.node_ids[0])
+        jarak = d[depot][nodes[0]]
         for i in range(n - 1):
-            jarak += d(self.node_ids[i], self.node_ids[i + 1])
-        jarak += d(self.node_ids[-1], depot)
+            jarak += d[nodes[i]][nodes[i + 1]]
+        jarak += d[nodes[-1]][depot]
 
         self.total_jarak = jarak
 
@@ -82,18 +83,27 @@ class Route:
         sebelum = depot if posisi == 0 else self.node_ids[posisi - 1]
         sesudah = depot if posisi >= n else self.node_ids[posisi]
 
-        d = self.instance.jarak
+        d = getattr(self.instance, "_matriks_jarak", self.instance.matrix_jarak)
         nid = node.nomor
-        return d(sebelum, nid) + d(nid, sesudah) - d(sebelum, sesudah)
+        return d[sebelum][nid] + d[nid][sesudah] - d[sebelum][sesudah]
 
     def sisip_terbaik(self, node):
         if not self.masih_muat(node):
             return None, float("inf")
 
+        nodes = self.node_ids
+        n = len(nodes)
+        d = getattr(self.instance, "_matriks_jarak", self.instance.matrix_jarak)
+        depot = self.instance.depot.nomor
+        nid = node.nomor
+        d_nid = d[nid]
+
         posisi_terbaik = 0
         biaya_terbaik = float("inf")
-        for posisi in range(len(self.node_ids) + 1):
-            biaya = self.biaya_sisip(node, posisi)
+        for posisi in range(n + 1):
+            sebelum = depot if posisi == 0 else nodes[posisi - 1]
+            sesudah = depot if posisi == n else nodes[posisi]
+            biaya = d[sebelum][nid] + d_nid[sesudah] - d[sebelum][sesudah]
             if biaya < biaya_terbaik:
                 posisi_terbaik = posisi
                 biaya_terbaik = biaya

@@ -1,16 +1,31 @@
 instance,seed,konfigurasi,jarak,waktu_detik,status
-X-n101-k25.vrp,1,Baseline,45631,1.57,LAYAK
-X-n101-k25.vrp,2,Baseline,47210,1.55,LAYAK
-X-n101-k25.vrp,3,Baseline,43589,1.39,LAYAK
-X-n101-k25.vrp,4,Baseline,46952,1.46,LAYAK
-X-n101-k25.vrp,5,Baseline,48023,1.49,LAYAK
-X-n143-k7.vrp,1,Baseline,17407,3.43,LAYAK
-X-n143-k7.vrp,2,Baseline,16976,3.33,LAYAK
-X-n143-k7.vrp,3,Baseline,16794,3.60,LAYAK
-X-n143-k7.vrp,4,Baseline,17475,4.56,LAYAK
-X-n143-k7.vrp,5,Baseline,16731,4.47,LAYAK
-X-n351-k40.vrp,1,Baseline,52722,5.44,LAYAK
-X-n351-k40.vrp,2,Baseline,57577,5.02,LAYAK
-X-n351-k40.vrp,3,Baseline,60404,6.79,LAYAK
-X-n351-k40.vrp,4,Baseline,54398,5.84,LAYAK
-X-n351-k40.vrp,5,Baseline,56752,5.82,LAYAK
+X-n101-k25 (K=25),1,Baseline,29531,0.69,LAYAK
+X-n101-k25 (K=25),2,Baseline,29632,0.68,LAYAK
+X-n101-k25 (K=25),3,Baseline,29023,0.63,LAYAK
+X-n101-k25 (K=25),4,Baseline,29493,0.65,LAYAK
+X-n101-k25 (K=25),5,Baseline,28728,0.63,LAYAK
+X-n143-k7 (K=7),1,Baseline,16700,1.66,LAYAK
+X-n143-k7 (K=7),2,Baseline,16285,1.64,LAYAK
+X-n143-k7 (K=7),3,Baseline,16829,1.57,LAYAK
+X-n143-k7 (K=7),4,Baseline,16723,1.61,LAYAK
+X-n143-k7 (K=7),5,Baseline,16129,1.62,LAYAK
+X-n351-k40 (K=40),1,Baseline,37103,1.97,LAYAK
+X-n351-k40 (K=40),2,Baseline,36486,2.24,LAYAK
+X-n351-k40 (K=40),3,Baseline,37001,2.19,LAYAK
+X-n351-k40 (K=40),4,Baseline,36549,2.07,LAYAK
+X-n351-k40 (K=40),5,Baseline,36854,2.09,LAYAK
+X-n101-k25 (K=25),1,Full,29403,0.80,LAYAK
+X-n101-k25 (K=25),2,Full,29497,0.84,LAYAK
+X-n101-k25 (K=25),3,Full,28756,0.79,LAYAK
+X-n101-k25 (K=25),4,Full,29365,0.81,LAYAK
+X-n101-k25 (K=25),5,Full,28988,0.79,LAYAK
+X-n143-k7 (K=7),1,Full,16220,1.97,LAYAK
+X-n143-k7 (K=7),2,Full,16345,2.10,LAYAK
+X-n143-k7 (K=7),3,Full,16631,1.97,LAYAK
+X-n143-k7 (K=7),4,Full,16664,1.89,LAYAK
+X-n143-k7 (K=7),5,Full,16821,1.82,LAYAK
+X-n351-k40 (K=40),1,Full,33749,7.94,LAYAK
+X-n351-k40 (K=40),2,Full,34238,8.16,LAYAK
+X-n351-k40 (K=40),3,Full,34392,6.84,LAYAK
+X-n351-k40 (K=40),4,Full,34976,7.25,LAYAK
+X-n351-k40 (K=40),5,Full,31900,7.72,LAYAK

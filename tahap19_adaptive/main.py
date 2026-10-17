@@ -1,16 +1,13 @@
 """
-TAHAP 19 — ALNS LENGKAP: BOBOT YANG MENYESUAIKAN DIRI
+TAHAP 19 — ALNS LENGKAP: ADAPTIF, MULTI-SEED, & PEMOLES LOCAL SEARCH
 ===============================================================================
-Inilah huruf "A" pada ALNS.
-
-Di Tahap 18 bobot operator tetap sama rata selamanya. Padahal di Tahap 15
-kita sudah melihat kualitas keempat pasangan jelas berbeda.
-
-Sekarang bobot dihitung ulang setiap akhir SEGMEN, memakai rumus M6:
-
-    w[i, j+1] = w[i, j] * (1 - r) + r * (pi_i / theta_i)
-
-dengan skor sigma1 = 33, sigma2 = 9, sigma3 = 13.
+Eksperimen komparatif:
+1. Satu kali jalan ALNS Adaptif dengan analisis pergeseran bobot operator.
+2. Uji Multi-Seed (5 Seed) membandingkan:
+   - Random Search (kontrol acak)
+   - Bobot Tetap (r = 0.0)
+   - ALNS Adaptif (r = 0.3)
+   - ALNS Adaptif + Pemoles Local Search (2-Opt, Relocate, Swap)
 ===============================================================================
 """
 
@@ -23,23 +20,29 @@ from baca_data import baca_instance
 from construction import ConstructionHeuristic
 from cvrp_instance import CVRPInstance
 from destroy import DestroyOperator
+from local_search import LocalSearch
 from repair import RepairOperator
 
-NILAI_OPTIMAL = 27591
+NILAI_OPTIMAL = 25896
 MAKS_ITERASI = 2000
 SEED = 42
 
 folder = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(folder, "X", "X-n101-k25.vrp")
+path = os.path.join(folder, "X", "X-n351-k40.vrp")
 daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path)
 instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
 
-solusi_awal = ConstructionHeuristic(instance).nearest_neighbor()
-print(f"\nSolusi awal: {solusi_awal.total_jarak}\n")
+# Uji coba kelayakan armada mulai dari K=25, K=26, dst.
+k_efektif = instance.cari_armada_minimal_layak(verbose=True)
+
+solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
+print(f"\nSolusi awal : {solusi_awal.total_jarak}")
+assert solusi_awal.layak(), f"Solusi awal TIDAK LAYAK: {solusi_awal.daftar_pelanggaran()}"
+print(f"Status kelayakan solusi awal: LAYAK\n")
 
 
 # =============================================================================
-# SATU KALI JALAN, SAMBIL MENGAMATI BOBOTNYA BERUBAH
+# 1. SATU KALI JALAN ALNS ADAPTIF
 # =============================================================================
 print("=" * 72)
 print(f" ALNS LENGKAP {MAKS_ITERASI} ITERASI")
@@ -55,16 +58,25 @@ hasil = pencari.jalankan(solusi_awal)
 waktu = time.time() - mulai
 
 print("=" * 72)
-print(f"  Waktu: {waktu:.1f} detik, diterima "
-      f"{pencari.jumlah_diterima} iterasi")
+print(f"  Waktu: {waktu:.1f} detik, diterima {pencari.jumlah_diterima} iterasi")
 print("=" * 72)
 
+# Poles hasil akhir dengan Local Search
+ls = LocalSearch(instance, operators=["2opt", "relocate", "swap"], max_iterations=50)
+hasil_poles = ls.run(hasil, nilai_optimal=NILAI_OPTIMAL, verbose=False)
+
 print()
-hasil.cetak("SOLUSI AKHIR ALNS")
+hasil_poles.cetak("SOLUSI AKHIR ALNS + LOCAL SEARCH")
+
+# Ekspor berkas solusi format standar CVRPLIB .sol
+nama_instance = os.path.splitext(os.path.basename(path))[0]
+path_sol_out = os.path.join(folder, f"solusi_terbaik_{nama_instance}.sol")
+hasil_poles.simpan_cvrplib_sol(path_sol_out)
+print(f"  [EKSPOR SOLUSI] Berkas .sol tersimpan di: {path_sol_out}")
 
 
 # =============================================================================
-# BAGAIMANA BOBOT BERUBAH SEPANJANG PENCARIAN
+# 2. PERJALANAN BOBOT TIAP OPERATOR
 # =============================================================================
 print("=" * 72)
 print(" PERJALANAN BOBOT TIAP OPERATOR")
@@ -75,8 +87,9 @@ print("""  Hal yang penting bukan besar bobotnya, melainkan perbandingannya.
   Roulette wheel memakai peluang  p_i = w_i / jumlah w, jadi di bawah ini
   bobot sudah diubah menjadi persen peluang terpilih.
 """)
+lebar_tabel = 10 + len(semua) * 20
 print(f"  {'Iterasi':>8} | " + " | ".join(f"{n[:17]:>17}" for n in semua))
-print("  " + "-" * 84)
+print("  " + "-" * lebar_tabel)
 
 for iterasi, bd, br in pencari.riwayat_bobot[::3]:
     total_d, total_r = sum(bd.values()), sum(br.values())
@@ -84,8 +97,10 @@ for iterasi, bd, br in pencari.riwayat_bobot[::3]:
     for n in semua:
         if n in bd:
             baris.append(f"{bd[n] / total_d * 100:>16.1f}%")
-        else:
+        elif n in br:
             baris.append(f"{br[n] / total_r * 100:>16.1f}%")
+        else:
+            baris.append(f"{'-':>17}")
     print(f"  {iterasi:>8} | " + " | ".join(baris))
 
 print()
@@ -95,73 +110,78 @@ tr = sum(pencari.bobot_repair.values())
 for nama in semua:
     if nama in pencari.bobot_destroy:
         peluang = pencari.bobot_destroy[nama] / td * 100
-    else:
+    elif nama in pencari.bobot_repair:
         peluang = pencari.bobot_repair[nama] / tr * 100
-    print(f"    {nama:<20} peluang {peluang:>5.1f}% | "
-          f"dipakai {pencari.pemakaian[nama]:>5} kali")
-
-print("""
-  Dua hal yang layak diperhatikan:
-
-  1. Peluangnya BERGESER dari 50-50 pada awal segmen. ALNS menemukan
-     sendiri operator mana yang berguna dan kita tidak pernah memberitahunya.
-
-  2. Angka mutlak bobot menyusut terus. Itu wajar: makin lama suhu makin
-     dingin, makin sedikit solusi baru yang diterima, jadi skor yang
-     masuk makin kecil.
-""")
+    else:
+        continue
+    print(f"    {nama:<20} peluang {peluang:>5.1f}% | dipakai {pencari.pemakaian.get(nama, 0):>5} kali")
 
 
 # =============================================================================
-# JANGAN MENILAI DARI SATU KALI JALAN
+# 3. UJI LIMA SEED LENGKAP: 4 METODE PEMBANDING (STUDI ABLASI)
 # =============================================================================
-print("=" * 72)
-print(" UJI LIMA SEED: ADAPTIF vs BOBOT TETAP")
-print("=" * 72)
-print("""  Di Tahap 17 kebetulan kita mendapat 784 persis. Itu SATU kali jalan
-  dengan SATU seed. Algoritma acak tidak boleh dinilai begitu.
+print()
+print("=" * 90)
+print(" UJI LIMA SEED: RANDOM SEARCH vs BOBOT TETAP vs ADAPTIF vs FULL ALNS (4 MODIFIKASI)")
+print("=" * 90)
 
-  Sekarang kita jalankan lima kali dengan seed berbeda.
-""")
+print(f"  {'Seed':>5} | {'Random Search':>15} | {'Tetap (r=0)':>13} | {'Adaptif':>12} | {'Full ALNS':>14}")
+print("  " + "-" * 72)
 
-print(f"  {'Seed':>5} | {'Bobot tetap (r=0)':>19} | {'Adaptif (r=0.3)':>17}")
-print("  " + "-" * 50)
+hasil_random, hasil_tetap, hasil_adaptif, hasil_full = [], [], [], []
 
-hasil_tetap, hasil_adaptif = [], []
 for seed in range(1, 6):
+    # A. RANDOM SEARCH (Tanpa adaptif, tanpa modifikasi, random walk)
     random.seed(seed)
-    a = ALNS(instance, maks_iterasi=MAKS_ITERASI, reaction_factor=0.0,
-             panjang_segmen=100, tampilkan_setiap=0).jalankan(solusi_awal)
+    sol_rand = ALNS(
+        instance, maks_iterasi=MAKS_ITERASI, mode_random_search=True,
+        pakai_ls=False, pakai_shaw=False, pakai_reheating=False, pakai_regret3=False,
+        panjang_segmen=100, tampilkan_setiap=0
+    ).jalankan(solusi_awal)
+
+    # B. BOBOT TETAP (Baseline r = 0.0, SA normal)
     random.seed(seed)
-    b = ALNS(instance, maks_iterasi=MAKS_ITERASI, reaction_factor=0.3,
-             panjang_segmen=100, tampilkan_setiap=0).jalankan(solusi_awal)
+    sol_tetap = ALNS(
+        instance, maks_iterasi=MAKS_ITERASI, reaction_factor=0.0, mode_random_search=False,
+        pakai_ls=False, pakai_shaw=False, pakai_reheating=False, pakai_regret3=False,
+        panjang_segmen=100, tampilkan_setiap=0
+    ).jalankan(solusi_awal)
 
-    hasil_tetap.append(a.total_jarak)
-    hasil_adaptif.append(b.total_jarak)
-    print(f"  {seed:>5} | {a.total_jarak:>19} | {b.total_jarak:>17}")
+    # C. ADAPTIF (r = 0.3, SA normal tanpa modifikasi)
+    random.seed(seed)
+    sol_adap = ALNS(
+        instance, maks_iterasi=MAKS_ITERASI, reaction_factor=0.3, mode_random_search=False,
+        pakai_ls=False, pakai_shaw=False, pakai_reheating=False, pakai_regret3=False,
+        panjang_segmen=100, tampilkan_setiap=0
+    ).jalankan(solusi_awal)
 
-print("  " + "-" * 50)
-rata_t = sum(hasil_tetap) / len(hasil_tetap)
-rata_a = sum(hasil_adaptif) / len(hasil_adaptif)
-print(f"  {'Rata-rata':>5} | {rata_t:>19.1f} | {rata_a:>17.1f}")
-print(f"  {'Terbaik':>5} | {min(hasil_tetap):>19} | {min(hasil_adaptif):>17}")
-print(f"  {'Terburuk':>5} | {max(hasil_tetap):>19} | {max(hasil_adaptif):>17}")
-print("  " + "-" * 50)
+    # D. FULL ALNS (4 Modifikasi: Shaw + Regret3 + Reheating + Local Search)
+    random.seed(seed)
+    sol_full = ALNS(
+        instance, maks_iterasi=MAKS_ITERASI, reaction_factor=0.3, mode_random_search=False,
+        pakai_ls=True, pakai_shaw=True, pakai_reheating=True, pakai_regret3=True,
+        panjang_segmen=100, tampilkan_setiap=0
+    ).jalankan(solusi_awal)
 
+    assert sol_full.layak(), f"Solusi Full ALNS Seed {seed} TIDAK LAYAK!"
+
+    hasil_random.append(sol_rand.total_jarak)
+    hasil_tetap.append(sol_tetap.total_jarak)
+    hasil_adaptif.append(sol_adap.total_jarak)
+    hasil_full.append(sol_full.total_jarak)
+
+    print(f"  {seed:>5} | {sol_rand.total_jarak:>15} | {sol_tetap.total_jarak:>13} | {sol_adap.total_jarak:>12} | {sol_full.total_jarak:>14}")
+
+print("  " + "-" * 72)
+print(f"  {'Rata':>5} | {sum(hasil_random)/5:>15.1f} | {sum(hasil_tetap)/5:>13.1f} | {sum(hasil_adaptif)/5:>12.1f} | {sum(hasil_full)/5:>14.1f}")
+print(f"  {'Terbaik':>5} | {min(hasil_random):>15} | {min(hasil_tetap):>13} | {min(hasil_adaptif):>12} | {min(hasil_full):>14}")
+print(f"  {'Terburuk':>5} | {max(hasil_random):>15} | {max(hasil_tetap):>13} | {max(hasil_adaptif):>12} | {max(hasil_full):>14}")
+print("  " + "-" * 72)
+
+gap_best = ((min(hasil_full) - NILAI_OPTIMAL) / NILAI_OPTIMAL) * 100
+gap_avg = ((sum(hasil_full)/5 - NILAI_OPTIMAL) / NILAI_OPTIMAL) * 100
 print(f"""
-  Hal yang perlu diperhatikan bukan hanya nilai terbaik, melainkan juga
-  nilai terburuk dan rata-ratanya. Algoritma yang baik adalah yang
-  hasilnya stabil, bukan yang sesekali beruntung.
-
-  Nilai optimal instance ini: {NILAI_OPTIMAL}
+  Nilai BKS Instance ini : {NILAI_OPTIMAL}
+  Gap Terbaik (Full ALNS): +{gap_best:.2f}%
+  Gap Rata-rata          : +{gap_avg:.2f}%
 """)
-
-# -----------------------------------------------------------------------------
-# LATIHAN 19.1
-#   Ubah reaction_factor menjadi 0.0, 0.1, 0.5, dan 1.0.
-#   Bagaimana bentuk perjalanan bobotnya? Mana yang paling stabil?
-#
-# LATIHAN 19.2
-#   Ubah panjang_segmen menjadi 20 (sering diperbarui) lalu 500 (jarang).
-#   Apa akibatnya terhadap bobot?
-# -----------------------------------------------------------------------------
