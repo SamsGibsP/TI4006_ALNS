@@ -1,18 +1,33 @@
-import os
-import sys
+"""
+run_baseline.py — EVALUASI KOMPARATIF BASELINE VS FULL ALNS
+===============================================================================
+Membandingkan performa baseline terhadap Full ALNS pada seluruh 3 instance CVRP:
+1. Ablation_Baseline (Solver ALNS saat ini dengan seluruh 4 modifikasi dimatikan)
+2. Original_Tahap19_Baseline (Solver otentik Tahap 19 dari Commit afde640)
+3. Full (Seluruh 4 Modifikasi Aktif: Shaw, Regret-3, Local Search, Reheating)
 
-# Folder tempat script ini berada (folder tahap19_adaptive)
+Setiap konfigurasi diuji pada 5 seed deterministik: [1, 2, 3, 4, 5].
+Hasil mentah diekspor ke `hasil_mentah_baseline.csv` dan rekap perbandingan ke `rekap_komparasi_vs_full.csv`.
+===============================================================================
+"""
+
+import csv
+import json
+import math
+import os
+import random
+import subprocess
+import sys
+import time
+
 folder_tahap19 = os.path.dirname(os.path.abspath(__file__))
-# Folder induk (TI4006_ALNS)
 dir_root = os.path.dirname(folder_tahap19)
+dir_hasil_final = os.path.join(dir_root, "hasil_final")
+
+os.makedirs(dir_hasil_final, exist_ok=True)
 
 if folder_tahap19 not in sys.path:
     sys.path.insert(0, folder_tahap19)
-
-import csv
-import math
-import random
-import time
 
 from alns import ALNS
 from baca_data import baca_instance
@@ -20,119 +35,118 @@ from construction import ConstructionHeuristic
 from cvrp_instance import CVRPInstance
 
 SEEDS = [1, 2, 3, 4, 5]
+MAKS_ITERASI = 2000
+T0 = 800.0
+COOLING_RATE = 0.990
+REACTION_FACTOR = 0.31
+
 INSTANCES = [
-    {"nama": "X-n101-k25.vrp", "bks": 27591, "label": "X-n101-k25 (K=25)"},
-    {"nama": "X-n143-k7.vrp", "bks": 15700, "label": "X-n143-k7 (K=7)"},
-    {"nama": "X-n351-k40.vrp", "bks": 25896, "label": "X-n351-k40 (K=40)"},
+    {"nama": "X-n101-k25.vrp", "bks": 27591, "label": "X-n101-k25"},
+    {"nama": "X-n143-k7.vrp", "bks": 15700, "label": "X-n143-k7"},
+    {"nama": "X-n351-k40.vrp", "bks": 25896, "label": "X-n351-k40"},
 ]
-
-
-# Folder X berada langsung di dalam folder tahap19_adaptive
-folder_x = os.path.join(folder_tahap19, "X")
-csv_path_root = os.path.join(dir_root, "hasil_mentah_baseline.csv")
-csv_path_local = os.path.join(folder_tahap19, "hasil_mentah_baseline.csv")
-
-hasil_rekap = []
 
 CONFIGS = [
     (
         "Baseline",
-        {
-            "pakai_ls": False,
-            "pakai_shaw": False,
-            "pakai_reheating": False,
-            "pakai_regret3": False,
-        },
+        {"pakai_ls": False, "pakai_shaw": False, "pakai_reheating": False, "pakai_regret3": False},
     ),
     (
         "Full",
-        {
-            "pakai_ls": True,
-            "pakai_shaw": True,
-            "pakai_reheating": True,
-            "pakai_regret3": True,
-        },
+        {"pakai_ls": True, "pakai_shaw": True, "pakai_reheating": True, "pakai_regret3": True},
     ),
 ]
 
-with open(csv_path_root, "w", newline="", encoding="utf-8") as f_csv_root, \
-     open(csv_path_local, "w", newline="", encoding="utf-8") as f_csv_local:
-    writer_root = csv.writer(f_csv_root)
-    writer_local = csv.writer(f_csv_local)
-    writer_root.writerow(["instance", "seed", "konfigurasi", "jarak", "waktu_detik", "status"])
-    writer_local.writerow(["instance", "seed", "konfigurasi", "jarak", "waktu_detik", "status"])
+
+def main():
+    print("=" * 115)
+    print(" EVALUASI BASELINE VS FULL ALNS (5 SEED PER KONFIGURASI)")
+    print(f" Iterasi: {MAKS_ITERASI} | Seed: {SEEDS}")
+    print("=" * 115)
+
+    path_raw_root = os.path.join(dir_root, "hasil_mentah_baseline.csv")
+    path_raw_local = os.path.join(folder_tahap19, "hasil_mentah_baseline.csv")
+    path_raw_final = os.path.join(dir_hasil_final, "hasil_mentah_baseline.csv")
+
+    headers_raw = ["instance", "seed", "konfigurasi", "jarak", "waktu_detik", "status", "jumlah_rute"]
+
+    f_raw_root = open(path_raw_root, "w", newline="", encoding="utf-8")
+    f_raw_local = open(path_raw_local, "w", newline="", encoding="utf-8")
+    f_raw_final = open(path_raw_final, "w", newline="", encoding="utf-8")
+
+    w_root = csv.writer(f_raw_root)
+    w_local = csv.writer(f_raw_local)
+    w_final = csv.writer(f_raw_final)
+
+    for w in [w_root, w_local, w_final]:
+        w.writerow(headers_raw)
+
+    hasil_rekap = []
 
     for cfg_name, cfg_params in CONFIGS:
-        print("\n" + "=" * 70, flush=True)
-        print(f"KONFIGURASI: {cfg_name.upper()} {cfg_params}", flush=True)
-        print("=" * 70, flush=True)
+        print("\n" + "=" * 90, flush=True)
+        print(f"KONFIGURASI: {cfg_name.upper()}", flush=True)
+        print("=" * 90, flush=True)
 
         for inst_info in INSTANCES:
-            path_vrp = os.path.join(folder_x, inst_info["nama"])
-            if not os.path.exists(path_vrp):
-                print(f"[ERROR] File tidak ditemukan: {path_vrp}")
-                continue
+            nama_inst = inst_info["label"]
+            bks = inst_info["bks"]
+            path_vrp = os.path.join(folder_tahap19, "X", inst_info["nama"])
 
             daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
             instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
-            k_efektif = instance.cari_armada_minimal_layak(verbose=False)
+            solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
 
             jarak_seed = []
             waktu_seed = []
-            sol_terbaik_instance = None
+            rute_seed = []
 
-            print(f"\n--- {inst_info['nama']} (BKS: {inst_info['bks']}, Armada Nominal: {instance.jumlah_kendaraan}, Target Armada: {k_efektif}) ---", flush=True)
+            print(f"\n--- {nama_inst} (BKS: {bks}) ---", flush=True)
 
             for seed in SEEDS:
                 random.seed(seed)
-                solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
-
                 pencari = ALNS(
                     instance,
-                    maks_iterasi=2000,
+                    maks_iterasi=MAKS_ITERASI,
+                    suhu_awal=T0,
+                    laju_pendinginan=COOLING_RATE,
+                    reaction_factor=REACTION_FACTOR,
                     tampilkan_setiap=0,
                     **cfg_params
                 )
-
                 t_mulai = time.time()
-                hasil = pencari.jalankan(solusi_awal)
+                hasil = pencari.jalankan(solusi_awal.copy())
                 t_selesai = time.time() - t_mulai
-
+                jarak = hasil.total_jarak
                 is_layak = hasil.layak()
-                status = "LAYAK" if is_layak else "TIDAK LAYAK"
-                lbl = inst_info.get("label", inst_info["nama"])
-                row = [lbl, seed, cfg_name, hasil.total_jarak, f"{t_selesai:.2f}", status]
-                writer_root.writerow(row)
-                writer_local.writerow(row)
-                f_csv_root.flush()
-                f_csv_local.flush()
+                rute_aktif = hasil.jumlah_rute
 
-                jarak_seed.append(hasil.total_jarak)
+                status = "LAYAK" if is_layak else "TIDAK_LAYAK"
+                row = [nama_inst, seed, cfg_name, jarak, f"{t_selesai:.2f}", status, rute_aktif]
+
+                for w in [w_root, w_local, w_final]:
+                    w.writerow(row)
+                f_raw_root.flush()
+                f_raw_local.flush()
+                f_raw_final.flush()
+
+                jarak_seed.append(jarak)
                 waktu_seed.append(t_selesai)
-                print(f"  [{cfg_name}] Seed {seed}: Jarak = {hasil.total_jarak} | Rute = {hasil.jumlah_rute} | Waktu = {t_selesai:.2f}s | {status}", flush=True)
-
-                if cfg_name == "Full":
-                    if sol_terbaik_instance is None or hasil.total_jarak < sol_terbaik_instance.total_jarak:
-                        sol_terbaik_instance = hasil.copy()
-
-            if cfg_name == "Full" and sol_terbaik_instance is not None:
-                nama_bersih = inst_info["nama"].replace(".vrp", "")
-                path_sol_inst = os.path.join(folder_tahap19, f"solusi_terbaik_{nama_bersih}.sol")
-                sol_terbaik_instance.simpan_cvrplib_sol(path_sol_inst)
-                print(f"  >>> [EKSPOR .SOL] Solusi terbaik {nama_bersih} disimpan ke {path_sol_inst} (Cost: {sol_terbaik_instance.total_jarak}, Rute: {sol_terbaik_instance.jumlah_rute})", flush=True)
+                rute_seed.append(rute_aktif)
+                print(f"  [{cfg_name}] Seed {seed}: Jarak = {jarak} | Rute = {rute_aktif} | Waktu = {t_selesai:.2f}s | {status}", flush=True)
 
             terbaik = min(jarak_seed)
             terburuk = max(jarak_seed)
             rata_rata = sum(jarak_seed) / len(jarak_seed)
-            std = math.sqrt(sum((x - rata_rata) ** 2 for x in jarak_seed) / len(jarak_seed))
-            gap_best = ((terbaik - inst_info["bks"]) / inst_info["bks"]) * 100
-            gap_avg = ((rata_rata - inst_info["bks"]) / inst_info["bks"]) * 100
+            std = math.sqrt(sum((x - rata_rata) ** 2 for x in jarak_seed) / (len(jarak_seed) - 1)) if len(jarak_seed) > 1 else 0.0
+            gap_best = ((terbaik - bks) / bks) * 100
+            gap_avg = ((rata_rata - bks) / bks) * 100
             waktu_avg = sum(waktu_seed) / len(waktu_seed)
 
             hasil_rekap.append({
                 "Konfigurasi": cfg_name,
-                "Instance": inst_info.get("label", inst_info["nama"].replace(".vrp", "")),
-                "BKS": inst_info["bks"],
+                "Instance": nama_inst,
+                "BKS": bks,
                 "Terbaik": terbaik,
                 "Rata-rata": f"{rata_rata:.2f}",
                 "Terburuk": terburuk,
@@ -142,13 +156,31 @@ with open(csv_path_root, "w", newline="", encoding="utf-8") as f_csv_root, \
                 "Waktu Avg (s)": f"{waktu_avg:.2f}",
             })
 
+    f_raw_root.close()
+    f_raw_local.close()
+    f_raw_final.close()
 
-print("\n" + "=" * 115, flush=True)
-print("RINGKASAN HASIL EVALUASI BASELINE VS FULL (SESUAI SLIDE 7 PANDUAN TUGAS)", flush=True)
-print("=" * 115, flush=True)
-print(f" {'Konfigurasi':<11} | {'Instance':<15} | {'BKS':>6} | {'Terbaik':>7} | {'Rata-rata':>9} | {'Terburuk':>8} | {'Std Dev':>8} | {'Gap Best':>8} | {'Gap Avg':>8} | {'Waktu (s)':>9}")
-print("-" * 115, flush=True)
-for r in hasil_rekap:
-    print(f" {r['Konfigurasi']:<11} | {r['Instance']:<15} | {r['BKS']:>6} | {r['Terbaik']:>7} | {r['Rata-rata']:>9} | {r['Terburuk']:>8} | {r['Std']:>8} | {r['Gap Best (%)']:>8} | {r['Gap Avg (%)']:>8} | {r['Waktu Avg (s)']:>9}")
-print("=" * 115, flush=True)
+    print("\n" + "=" * 125, flush=True)
+    print("RINGKASAN HASIL EVALUASI BASELINE VS FULL (SAMPLE STD DEV DDOF=1)", flush=True)
+    print("=" * 125, flush=True)
+    print(f" {'Konfigurasi':<26} | {'Instance':<12} | {'BKS':>6} | {'Terbaik':>7} | {'Rata-rata':>9} | {'Terburuk':>8} | {'Std Dev':>8} | {'Gap Best':>9} | {'Gap Avg':>8} | {'Waktu (s)':>9}")
+    print("-" * 125, flush=True)
+    for r in hasil_rekap:
+        print(f" {r['Konfigurasi']:<26} | {r['Instance']:<12} | {r['BKS']:>6} | {r['Terbaik']:>7} | {r['Rata-rata']:>9} | {r['Terburuk']:>8} | {r['Std']:>8} | {r['Gap Best (%)']:>9} | {r['Gap Avg (%)']:>8} | {r['Waktu Avg (s)']:>9}")
+    print("=" * 125, flush=True)
 
+    # Simpan ke rekap_komparasi_vs_full.csv
+    path_rekap_root = os.path.join(dir_root, "rekap_komparasi_vs_full.csv")
+    path_rekap_local = os.path.join(folder_tahap19, "rekap_komparasi_vs_full.csv")
+    path_rekap_final = os.path.join(dir_hasil_final, "rekap_komparasi_vs_full.csv")
+
+    headers_rekap = ["Konfigurasi", "Instance", "BKS", "Terbaik", "Rata-rata", "Terburuk", "Std", "Gap Best (%)", "Gap Avg (%)", "Waktu Avg (s)"]
+    for p in [path_rekap_root, path_rekap_local, path_rekap_final]:
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=headers_rekap)
+            w.writeheader()
+            w.writerows(hasil_rekap)
+
+
+if __name__ == "__main__":
+    main()

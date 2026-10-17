@@ -32,9 +32,6 @@ path = os.path.join(folder, "X", "X-n351-k40.vrp")
 daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path)
 instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
 
-# Uji coba kelayakan armada mulai dari K=25, K=26, dst.
-k_efektif = instance.cari_armada_minimal_layak(verbose=True)
-
 solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
 print(f"\nSolusi awal : {solusi_awal.total_jarak}")
 assert solusi_awal.layak(), f"Solusi awal TIDAK LAYAK: {solusi_awal.daftar_pelanggaran()}"

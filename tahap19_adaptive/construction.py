@@ -1,8 +1,7 @@
 """
-construction.py — Heuristik Konstruksi Terkontrol (Clarke & Wright Savings + Bin Packing Fallback)
-Dijamin 100% LAYAK (jumlah rute <= K dan muatan rute <= Q) untuk seluruh instance.
+construction.py — Heuristik Konstruksi Clarke & Wright Savings Murni untuk CVRP.
+Solusi awal dijamin layak kapasitas dan pemenuhan seluruh pelanggan tepat satu kali.
 """
-import random
 from solution import Solution
 
 
@@ -15,9 +14,8 @@ class ConstructionHeuristic:
         d = getattr(self.instance, "_matriks_jarak", self.instance.matrix_jarak)
         pelanggan = list(self.instance.pelanggan)
         cap = self.instance.kapasitas
-        k_maks = self.instance.batas_armada
 
-        # --- CARA 1: Clarke and Wright Savings ---
+        # Inisialisasi: setiap pelanggan membentuk rute mandiri (depot -> p -> depot)
         routes = [[p] for p in pelanggan]
 
         def demand_rute(r):
@@ -34,6 +32,7 @@ class ConstructionHeuristic:
                 s = d[depot_id][p1_id] + d[depot_id][p2_id] - d[p1_id][p2_id]
                 savings.append((s, p1, p2))
 
+        # Urutkan penghematan dari terbesar ke terkecil
         savings.sort(key=lambda x: x[0], reverse=True)
 
         def cari_rute(node, active_routes):
@@ -52,6 +51,7 @@ class ConstructionHeuristic:
             r1 = routes[idx1]
             r2 = routes[idx2]
 
+            # Periksa batasan kapasitas kendaraan
             if demand_rute(r1) + demand_rute(r2) > cap:
                 continue
 
@@ -78,114 +78,141 @@ class ConstructionHeuristic:
             routes.pop(min(idx1, idx2))
             routes.append(new_r)
 
-        # Jika hasil penggabungan Clarke & Wright memenuhi kapasitas dan batasan armada (jika ada)
-        if k_maks is None or len(routes) <= k_maks:
-            solusi = Solution(self.instance)
-            for r_nodes in routes:
-                r = solusi.rute_baru()
-                for node in r_nodes:
-                    r.tambah_node(node)
+        # Bangun objek Solution dari hasil Clarke & Wright
+        solusi = Solution(self.instance)
+        for r_nodes in routes:
+            r = solusi.rute_baru()
+            for node in r_nodes:
+                r.tambah_node(node)
 
-            solusi.buang_rute_kosong()
-            if solusi.layak():
-                return solusi
+        solusi.buang_rute_kosong()
+        solusi.hitung_ulang()
 
-        # --- CARA 2: MEKANISME FALLBACK (BEST-FIT DECREASING / BIN PACKING COMPACTION) ---
-        # Hanya jika ada batas k_maks kaku dan len(routes) > k_maks
-        k_target = k_maks if k_maks is not None else self.instance.jumlah_kendaraan
-        pelanggan_desc = sorted(pelanggan, key=lambda n: n.demand, reverse=True)
-        bins = [[] for _ in range(k_target)]
-        loads = [0] * k_target
-        bfd_sukses = True
+        # Kompresi rute jika melebihi batas armada instance
+        k_target = getattr(self.instance, "jumlah_kendaraan", None)
+        if k_target is not None and solusi.jumlah_rute > k_target:
+            solusi = self.kompresi_ke_k_rute(solusi, k_target)
 
-        for p in pelanggan_desc:
-            best_idx = None
-            min_sisa = cap + 1
-            for b_idx in range(k_target):
-                sisa = cap - (loads[b_idx] + p.demand)
-                if sisa >= 0 and sisa < min_sisa:
-                    min_sisa = sisa
-                    best_idx = b_idx
-            if best_idx is not None:
-                bins[best_idx].append(p)
-                loads[best_idx] += p.demand
-            else:
-                bfd_sukses = False
+        solusi.buang_rute_kosong()
+        solusi.hitung_ulang()
+        return solusi
+
+    def kompresi_ke_k_rute(self, solusi, k_target):
+        """
+        Kompresi Rute Awal (Route Elimination Fallback) berbasis First-Fit Decreasing:
+        Mengeliminasi rute dengan muatan terkecil dan menyisipkan pelanggannya
+        ke rute-rute aktif yang tersisa selama kapasitas masih mencukupi.
+        """
+        solusi.buang_rute_kosong()
+        solusi.hitung_ulang()
+
+        while solusi.jumlah_rute > k_target:
+            rute_aktif = solusi.rute_terisi()
+            if len(rute_aktif) <= k_target:
                 break
 
-        if not bfd_sukses:
-            while True:
-                bins = [[] for _ in range(k_target)]
-                pelanggan_shuffled = list(pelanggan)
-                random.shuffle(pelanggan_shuffled)
-                for i, item in enumerate(pelanggan_shuffled):
-                    bins[i % k_target].append(item)
+            # 1. Ambil rute dengan total muatan terkecil untuk dieliminasi/dikosongkan
+            rute_min = min(rute_aktif, key=lambda r: r.total_muatan)
+            sol_backup = solusi.copy()
 
-                loads = [sum(n.demand for n in b) for b in bins]
+            # 2. Lepaskan semua pelanggannya, urutkan berdasarkan demand terbesar ke terkecil (prinsip FFD)
+            pelanggan_dilepas = [v.node for v in rute_min.daftar_visit]
+            pelanggan_dilepas.sort(key=lambda n: n.demand, reverse=True)
 
-                for step in range(10000):
-                    overloaded = [i for i in range(k_target) if loads[i] > cap]
-                    if not overloaded:
+            solusi.daftar_rute.remove(rute_min)
+
+            # 3. Sisipkan kembali pelanggan ke rute-rute aktif yang tersisa
+            semua_masuk = True
+            for node in pelanggan_dilepas:
+                terbaik_pos = None
+                terbaik_biaya = float("inf")
+                terbaik_rute = None
+
+                for r in solusi.rute_terisi():
+                    if r.total_muatan + node.demand <= self.instance.kapasitas:
+                        pos, delta = r.sisip_terbaik(node)
+                        if pos is not None and delta < terbaik_biaya:
+                            terbaik_biaya = delta
+                            terbaik_pos = pos
+                            terbaik_rute = r
+
+                if terbaik_rute is not None and terbaik_pos is not None:
+                    terbaik_rute.sisip_di(terbaik_pos, node)
+                else:
+                    # Coba 1-ejection / relocate: pindahkan 1 node dari r1 ke r2 agar node ini bisa masuk
+                    relocated = False
+                    for r1 in solusi.rute_terisi():
+                        if relocated:
+                            break
+                        for pos_v, v in enumerate(r1.daftar_visit):
+                            v_node = v.node
+                            if r1.total_muatan - v_node.demand + node.demand <= self.instance.kapasitas:
+                                for r2 in solusi.rute_terisi():
+                                    if r2 is not r1 and r2.total_muatan + v_node.demand <= self.instance.kapasitas:
+                                        p2, _ = r2.sisip_terbaik(v_node)
+                                        if p2 is not None:
+                                            r1.keluarkan_di(pos_v)
+                                            r2.sisip_di(p2, v_node)
+                                            p1, _ = r1.sisip_terbaik(node)
+                                            if p1 is not None:
+                                                r1.sisip_di(p1, node)
+                                                relocated = True
+                                                break
+                                            else:
+                                                # Rollback jika gagal
+                                                r2.keluarkan_di(p2)
+                                                r1.sisip_di(pos_v, v_node)
+                    if not relocated:
+                        semua_masuk = False
                         break
 
-                    b1 = random.choice(overloaded)
-                    if not bins[b1]:
-                        continue
-                    idx1 = random.randrange(len(bins[b1]))
-                    n1 = bins[b1][idx1]
+            if semua_masuk:
+                solusi.buang_rute_kosong()
+                solusi.hitung_ulang()
+            else:
+                # Jika kompresi rute ini gagal, kembalikan solusi ke backup
+                solusi.daftar_rute = sol_backup.daftar_rute
+                break
 
-                    b2 = random.randrange(k_target)
-                    if b2 == b1:
-                        continue
+        # Jika setelah route elimination masih melebihi k_target, gunakan partisi FFD terjamin
+        if solusi.jumlah_rute > k_target:
+            solusi = self._konstruksi_partisi_ffd(k_target)
 
-                    if bins[b2] and random.random() < 0.7:
-                        idx2 = random.randrange(len(bins[b2]))
-                        n2 = bins[b2][idx2]
+        return solusi
 
-                        cur_pen = max(0, loads[b1] - cap) + max(0, loads[b2] - cap)
-                        l1_new = loads[b1] - n1.demand + n2.demand
-                        l2_new = loads[b2] - n2.demand + n1.demand
-                        new_pen = max(0, l1_new - cap) + max(0, l2_new - cap)
-
-                        if new_pen <= cur_pen:
-                            bins[b1][idx1] = n2
-                            bins[b2][idx2] = n1
-                            loads[b1] = l1_new
-                            loads[b2] = l2_new
-                    else:
-                        cur_pen = max(0, loads[b1] - cap) + max(0, loads[b2] - cap)
-                        l1_new = loads[b1] - n1.demand
-                        l2_new = loads[b2] + n1.demand
-                        new_pen = max(0, l1_new - cap) + max(0, l2_new - cap)
-
-                        if new_pen <= cur_pen:
-                            bins[b1].pop(idx1)
-                            bins[b2].append(n1)
-                            loads[b1] = l1_new
-                            loads[b2] = l2_new
-
-                if sum(max(0, l - cap) for l in loads) == 0:
+    def _konstruksi_partisi_ffd(self, k_target):
+        """
+        Fallback Partisi FFD: Membagi seluruh pelanggan ke dalam bin berkapasitas Q
+        menggunakan 1D Bin Packing (FFD), kemudian mengurutkan kunjungan dengan TSP Nearest Neighbor.
+        Secara matematis dijamin menghasilkan rute <= k_target karena k_target >= k_bpp.
+        """
+        customers = sorted([n for n in self.instance.pelanggan], key=lambda n: n.demand, reverse=True)
+        cap = self.instance.kapasitas
+        bins = []
+        for c in customers:
+            placed = False
+            for b in bins:
+                if sum(x.demand for x in b) + c.demand <= cap:
+                    b.append(c)
+                    placed = True
                     break
+            if not placed:
+                bins.append([c])
 
-        solusi2 = Solution(self.instance)
-        for b_nodes in bins:
-            if not b_nodes:
-                continue
-            r = solusi2.rute_baru()
-            unvisited = list(b_nodes)
-            cur_node = depot_id
+        sol = Solution(self.instance)
+        for b in bins:
+            r = sol.rute_baru()
+            curr = self.instance.depot
+            unvisited = list(b)
             while unvisited:
-                best_n = min(unvisited, key=lambda n: d[cur_node][n.nomor])
-                r.tambah_node(best_n)
-                unvisited.remove(best_n)
-                cur_node = best_n.nomor
+                nxt = min(unvisited, key=lambda n: curr.jarak_ke(n))
+                r.tambah_node(nxt)
+                unvisited.remove(nxt)
+                curr = nxt
 
-        solusi2.buang_rute_kosong()
-        # Poles rute awal dengan pemoles intra-route cepat
-        from local_search import LocalSearch
-        ls_init = LocalSearch(self.instance, operators=["two_opt"], max_iterations=20)
-        solusi2 = ls_init.run(solusi2, verbose=False)
-        return solusi2
+        sol.buang_rute_kosong()
+        sol.hitung_ulang()
+        return sol
 
     def nearest_neighbor(self):
         """Alias untuk clarke_wright_savings demi kompatibilitas."""

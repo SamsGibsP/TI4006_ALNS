@@ -1,3 +1,4 @@
+﻿import inspect
 import random
 
 
@@ -11,15 +12,19 @@ class RepairOperator:
         fn = getattr(self, nama, None)
         if fn is None:
             raise ValueError(f"Operator perbaikan '{nama}' tidak dikenal.")
-        try:
-            return fn(solusi, bank, pakai_noise=pakai_noise, tingkat_noise=tingkat_noise)
-        except TypeError:
-            return fn(solusi, bank)
+        sig = inspect.signature(fn)
+        params = sig.parameters
+        kwargs = {}
+        if "pakai_noise" in params:
+            kwargs["pakai_noise"] = pakai_noise
+        if "tingkat_noise" in params:
+            kwargs["tingkat_noise"] = tingkat_noise
+        return fn(solusi, bank, **kwargs)
 
     def perbaiki_kelebihan_muatan(self, solusi):
         cap = self.instance.kapasitas
 
-        # Early exit: Jika tidak ada rute yang kelebihan muatan, langsung kembali
+        # ika tidak ada rute yang kelebihan muatan, langsung kembali
         if not any(r.total_muatan > cap for r in solusi.daftar_rute):
             return True
 
@@ -90,13 +95,18 @@ class RepairOperator:
                 r.tambah_node(node)
                 return True
 
-        # Boleh buka rute baru jika tidak ada batas armada kaku, atau masih di bawah batas armada
-        if self.instance.batas_armada is None or len(solusi.daftar_rute) < self.instance.batas_armada:
-            r_baru = solusi.rute_baru()
-            r_baru.tambah_node(node)
-            return True
+        # Hard-cap guardrail: jangan pernah mengizinkan rute baru jika kuota armada sudah tercapai
+        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        if batas_k is None:
+            batas_k = getattr(self.instance, "batas_armada", None)
 
-        return False
+        if batas_k is not None and len(rute_aktif) >= batas_k:
+            return False
+
+        r_baru = solusi.rute_baru()
+        r_baru.tambah_node(node)
+        return True
 
 
     def greedy_insertion(self, solusi, bank, pakai_noise=False, tingkat_noise=0.1):
@@ -162,8 +172,11 @@ class RepairOperator:
                     else:
                         c_node.pop(idx, None)
 
-        self.perbaiki_kelebihan_muatan(solusi)
-        return True
+        sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
+        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
+        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
 
     def regret2_insertion(self, solusi, bank, pakai_noise=False, tingkat_noise=0.1):
         """Regret-2 insertion dengan incremental caching dan opsi noise."""
@@ -242,8 +255,11 @@ class RepairOperator:
                     else:
                         c_node.pop(idx, None)
 
-        self.perbaiki_kelebihan_muatan(solusi)
-        return True
+        sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
+        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
+        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
 
     def regret3_insertion(self, solusi, bank, pakai_noise=False, tingkat_noise=0.1):
         """Regret-3 insertion (Ropke & Pisinger 2006) dengan incremental caching dan opsi noise."""
@@ -326,8 +342,11 @@ class RepairOperator:
                     else:
                         c_node.pop(idx, None)
 
-        self.perbaiki_kelebihan_muatan(solusi)
-        return True
+        sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
+        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
+        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
 
 
 def greedy_insertion(solusi, bank, instance=None, **kwargs):

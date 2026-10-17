@@ -52,7 +52,6 @@ def main():
 
     daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
     instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
-    k_terpilih = instance.cari_armada_minimal_layak(verbose=True)
 
     # 2. Bangun Solusi Awal
     solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
@@ -73,7 +72,7 @@ def main():
     print("=" * 78)
     print(" KONFIGURASI GRID SEARCH")
     print("=" * 78)
-    print(f"  Instance Uji       : {nama_file} (BKS = {bks}, Armada Optimal = {k_terpilih})")
+    print(f"  Instance Uji       : {nama_file} (BKS = {bks}, Armada = {instance.jumlah_kendaraan}, Rute Awal = {solusi_awal.jumlah_rute})")
     print(f"  Maksimal Iterasi   : {maks_iterasi} per run")
     print(f"  Daftar Seed        : {daftar_seed}")
     for p, vals in kisi_parameter.items():

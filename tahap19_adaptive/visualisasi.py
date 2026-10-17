@@ -248,7 +248,6 @@ def main():
     path_vrp = os.path.join(folder_tahap19, "X", "X-n101-k25.vrp")
     d, c, k = baca_instance(path_vrp)
     instance = CVRPInstance(d, c, k)
-    instance.cari_armada_minimal_layak(verbose=False)
     solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
 
     print("  * Menjalankan ALNS Full (2000 iterasi) untuk merekam probabilitas operator...")

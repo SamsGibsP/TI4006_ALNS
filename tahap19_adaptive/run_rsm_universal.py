@@ -124,17 +124,16 @@ def main():
         path_vrp = os.path.join(folder_tahap19, "X", item["nama"])
         daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
         inst = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
-        k_eff = inst.cari_armada_minimal_layak(verbose=False)
         sol_awal = ConstructionHeuristic(inst).clarke_wright_savings()
         assert sol_awal.layak(), f"Solusi awal {item['nama']} tidak layak!"
         instances_data.append({
             "nama": item["nama"],
             "bks": item["bks"],
-            "armada": k_eff,
+            "armada": inst.jumlah_kendaraan,
             "instance": inst,
             "solusi_awal": sol_awal,
         })
-        print(f"  * Instance {item['nama']:<15}: BKS={item['bks']:<6} | Armada={k_eff:>2} | Solusi Awal={sol_awal.total_jarak}")
+        print(f"  * Instance {item['nama']:<15}: BKS={item['bks']:<6} | Armada={inst.jumlah_kendaraan:>2} | Solusi Awal={sol_awal.total_jarak} ({sol_awal.jumlah_rute} rute)")
 
     print("\n" + "=" * 80)
     print(" MENJALANKAN 15 TITIK RANCANGAN BOX-BEHNKEN LINTAS INSTANCE...")

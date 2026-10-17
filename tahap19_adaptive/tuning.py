@@ -180,8 +180,6 @@ if __name__ == "__main__":
     path = os.path.join(folder, "X", "X-n101-k25.vrp")
     daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path)
     instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
-    instance.cari_armada_minimal_layak(verbose=True)
-
     solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
 
     kisi = {

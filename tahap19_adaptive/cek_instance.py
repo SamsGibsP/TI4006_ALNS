@@ -79,7 +79,6 @@ def main():
     print("=" * 105)
 
     fokus_instances = [
-        os.path.join(folder_ini, "A", "A-n32-k5.vrp"),
         os.path.join(folder_ini, "X", "X-n101-k25.vrp"),
         os.path.join(folder_ini, "X", "X-n143-k7.vrp"),
         os.path.join(folder_ini, "X", "X-n351-k40.vrp"),

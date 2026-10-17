@@ -25,11 +25,7 @@ class CVRPInstance:
     def __init__(self, daftar_node, kapasitas, jumlah_kendaraan, batas_armada=None):
         self.daftar_node = daftar_node
         self.kapasitas = kapasitas
-        # jumlah_kendaraan adalah k nominal / armada minimal
-        self.jumlah_kendaraan = jumlah_kendaraan
-        self.k_min = jumlah_kendaraan
-        # batas_armada adalah batas atas kaku jika ada; default None (k adalah minimum)
-        self.batas_armada = batas_armada
+        self.k_file = jumlah_kendaraan
 
         self.depot = daftar_node[0]
         self.pelanggan = [n for n in daftar_node if not n.adalah_depot()]
@@ -57,6 +53,41 @@ class CVRPInstance:
         if self._max_d <= 0:
             self._max_d = 1.0
 
+        # Batas armada minimal fisik dihitung secara generik berbasis 1D Bin Packing Problem (BPP)
+        if batas_armada is not None:
+            self.jumlah_kendaraan = batas_armada
+        else:
+            self.jumlah_kendaraan = self._hitung_armada_minimal_fisik()
+
+        self.batas_armada = self.jumlah_kendaraan
+
+    def _hitung_armada_minimal_fisik(self):
+        """
+        Menghitung batas bawah armada fisik secara matematis & generik:
+        1. Batas bawah kontinu L0 = ceil(sum(demand) / kapasitas)
+        2. Batas bawah diskret 1D Bin Packing Problem (BPP) menggunakan First-Fit Decreasing (FFD)
+        3. Menetapkan jumlah armada minimal fisik = max(k_file, L0, k_bpp)
+        """
+        demands = sorted([p.demand for p in self.pelanggan], reverse=True)
+        total_demand = sum(demands)
+        l0 = math.ceil(total_demand / self.kapasitas) if self.kapasitas > 0 else 1
+
+        # Simulasi 1D Bin Packing Problem (First-Fit Decreasing)
+        bins = []
+        for d in demands:
+            placed = False
+            for i in range(len(bins)):
+                if bins[i] + d <= self.kapasitas:
+                    bins[i] += d
+                    placed = True
+                    break
+            if not placed:
+                bins.append(d)
+        k_bpp = len(bins)
+
+        k_nominal = self.k_file if self.k_file is not None else 1
+        return max(k_nominal, l0, k_bpp)
+
     def ambil_node(self, nomor):
         return self.node_dict[nomor]
 
@@ -73,64 +104,6 @@ class CVRPInstance:
     def kendaraan_minimal(self):
         """Jumlah kendaraan paling sedikit yang mungkin bisa melayani semua."""
         return math.ceil(self.total_demand() / self.kapasitas)
-
-    def cari_armada_minimal_layak(self, verbose=True):
-        """
-        Menguji kelayakan armada mulai dari k nominal/file (misal k=25),
-        lalu k=26, dan seterusnya hingga ditemukan jumlah kendaraan terkecil
-        yang secara kapasitas (bin-packing) mampu melayani seluruh pelanggan.
-        """
-        k_nominal = self.jumlah_kendaraan if self.jumlah_kendaraan > 0 else self.kendaraan_minimal()
-        k_awal = min(k_nominal, self.kendaraan_minimal())
-        cap = self.kapasitas
-        tot_d = self.total_demand()
-        pel_desc = sorted(self.pelanggan, key=lambda n: n.demand, reverse=True)
-
-        if verbose:
-            print("=" * 72)
-            print(" PENGUJIAN KELAYAKAN MINIMUM ARMADA KENDARAAN (K)")
-            print("=" * 72)
-            print(f"  Total Permintaan Pelanggan : {tot_d}")
-            print(f"  Kapasitas per Kendaraan     : {cap}")
-            print(f"  Batas Bawah Teoritis (BPP) : ceil({tot_d} / {cap}) = {self.kendaraan_minimal()} kendaraan")
-            print(f"  Uji coba bertahap mulai dari K = {k_awal} kendaraan...")
-
-        k_test = k_awal
-        while k_test <= len(self.pelanggan):
-            bins = [0] * k_test
-            ok = True
-            for p in pel_desc:
-                best_b = None
-                min_sisa = cap + 1
-                for b in range(k_test):
-                    sisa = cap - (bins[b] + p.demand)
-                    if 0 <= sisa < min_sisa:
-                        min_sisa = sisa
-                        best_b = b
-                if best_b is not None:
-                    bins[best_b] += p.demand
-                else:
-                    ok = False
-                    break
-
-            if ok:
-                if verbose:
-                    sisa_total = k_test * cap - tot_d
-                    print(f"  -> Uji K = {k_test} kendaraan : LAYAK")
-                    print(f"     (Demand 100% termuat, sisa kapasitas total = {sisa_total} unit)")
-                    print(f"  => Batas armada ditetapkan : K = {k_test} kendaraan (Maksimum sesuai batas optimal)")
-                    print("=" * 72)
-                self.batas_armada = k_test
-                return k_test
-            else:
-                if verbose:
-                    slack = k_test * cap - tot_d
-                    print(f"  -> Uji K = {k_test} kendaraan : TIDAK LAYAK")
-                    print(f"     (Total kapasitas {k_test}x{cap}={k_test*cap}, selisih hanya {slack} unit, fragmentasi demand tidak muat)")
-                k_test += 1
-
-        self.batas_armada = len(self.pelanggan)
-        return self.batas_armada
 
     def cetak_ringkasan(self):
         """Menampilkan isi instance untuk memastikan data terbaca benar."""

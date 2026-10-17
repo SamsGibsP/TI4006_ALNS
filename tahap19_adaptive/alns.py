@@ -19,7 +19,7 @@ def hitung_parameter_adaptif(instance, maks_iterasi, jarak_awal):
     # Sesuai rekomendasi Ropke & Pisinger (2006): rho berkisar 8% s.d. 28% dari total pelanggan
     rho_min = max(8, round(0.08 * n))
     rho_maks = min(
-        round(0.28 * n),
+        round(0.4 * n),
         max(rho_min + 8, round(3.5 * avg_len)),
         60,
     )
@@ -232,6 +232,14 @@ class ALNS:
         self.x_terbaik.buang_rute_kosong()
         self.x_terbaik.hitung_ulang()
 
+        self.riwayat_terbaik = []
+        self.riwayat_bobot = []
+        self.jumlah_gagal = 0
+        self.jumlah_diterima = 0
+        self.jumlah_lebih_baik = 0
+        self.jumlah_sama = 0
+        self.jumlah_lebih_buruk = 0
+
         if self.pakai_adaptif:
             p_adp = hitung_parameter_adaptif(
                 self.instance, self.maks_iterasi, x.total_jarak
@@ -304,67 +312,70 @@ class ALNS:
                 tingkat_noise=self.tingkat_noise,
             )
 
-            if not berhasil or len(kandidat.nomor_pelanggan()) != len(
-                self.instance.pelanggan
-            ):
+            kandidat_valid = False
+            if berhasil and len(kandidat.nomor_pelanggan()) == len(self.instance.pelanggan):
+                kandidat.buang_rute_kosong()
+                kandidat.hitung_ulang()
+                if kandidat.layak():
+                    kandidat_valid = True
+
+            if not kandidat_valid:
+                # Rollback: kandidat tidak layak / repair gagal diabaikan, kembali ke x
                 self.jumlah_gagal += 1
-                continue
+            else:
+                is_layak = True
+                tanda = self.tanda_solusi(kandidat)
+                baru = tanda not in self.pernah_dikunjungi
+                self.pernah_dikunjungi.add(tanda)
 
-            tanda = self.tanda_solusi(kandidat)
-            baru = tanda not in self.pernah_dikunjungi
-            self.pernah_dikunjungi.add(tanda)
-
-            diterima = self.terima(x.total_jarak, kandidat.total_jarak)
-            lebih_baik = kandidat.total_jarak < x.total_jarak
-
-            # Validasi kelayakan solusi kandidat
-            is_layak = kandidat.layak()
-
-            if (
-                is_layak
-                and kandidat.total_jarak < self.x_terbaik.total_jarak
-                and baru
-            ):
-                self.beri_skor(nama_d, nama_r, self.sigma1)
-            elif lebih_baik and diterima and baru:
-                self.beri_skor(nama_d, nama_r, self.sigma2)
-            elif diterima and baru:
-                self.beri_skor(nama_d, nama_r, self.sigma3)
-
-            if diterima and is_layak:
-                x = kandidat
-                self.jumlah_diterima += 1
-
-            # Pembaruan rekor dan pemolesan Local Search (Slide 5: Pemoles tiap rekor baru)
-            # Wajib memanggil kandidat.layak() terlebih dahulu agar solusi tidak layak
-            # tidak pernah dipoles oleh Local Search atau disimpan sebagai x_terbaik.
-            if kandidat.layak() and kandidat.total_jarak < self.x_terbaik.total_jarak:
-                calon_terbaik = kandidat.copy()
-                calon_terbaik.buang_rute_kosong()
-                calon_terbaik.hitung_ulang()
-
-                if self.pakai_ls:
-                    self.jumlah_panggil_ls += 1
-                    calon_terbaik = self.local_search.run(
-                        calon_terbaik, verbose=False
-                    )
+                diterima = self.terima(x.total_jarak, kandidat.total_jarak)
+                lebih_baik = kandidat.total_jarak < x.total_jarak
 
                 if (
-                    calon_terbaik.layak()
-                    and calon_terbaik.total_jarak < self.x_terbaik.total_jarak
+                    is_layak
+                    and kandidat.total_jarak < self.x_terbaik.total_jarak
+                    and baru
                 ):
-                    self.x_terbaik = calon_terbaik
-                    self.iterasi_rekor = iterasi
-                    iter_tanpa_rekor = 0
-                    x = self.x_terbaik.copy()
-                    x.siapkan_armada()
+                    self.beri_skor(nama_d, nama_r, self.sigma1)
+                elif lebih_baik and diterima and baru:
+                    self.beri_skor(nama_d, nama_r, self.sigma2)
+                elif diterima and baru:
+                    self.beri_skor(nama_d, nama_r, self.sigma3)
 
-                    if self.tampilkan_setiap:
-                        print(
-                            f"  Iterasi {iterasi:>5} | sekarang {x.total_jarak:>5} "
-                            f"| terbaik {self.x_terbaik.total_jarak:>5} | REKOR BARU "
-                            f"({nama_d[:6]}+{nama_r[:6]})"
+                if diterima and is_layak:
+                    x = kandidat
+                    self.jumlah_diterima += 1
+
+                # Pembaruan rekor dan pemolesan Local Search (Slide 5: Pemoles tiap rekor baru)
+                # Wajib memanggil kandidat.layak() terlebih dahulu agar solusi tidak layak
+                # tidak pernah dipoles oleh Local Search atau disimpan sebagai x_terbaik.
+                if is_layak and kandidat.total_jarak < self.x_terbaik.total_jarak:
+                    calon_terbaik = kandidat.copy()
+                    calon_terbaik.buang_rute_kosong()
+                    calon_terbaik.hitung_ulang()
+
+                    if self.pakai_ls:
+                        self.jumlah_panggil_ls += 1
+                        calon_terbaik = self.local_search.run(
+                            calon_terbaik, verbose=False
                         )
+
+                    if (
+                        calon_terbaik.layak()
+                        and calon_terbaik.total_jarak < self.x_terbaik.total_jarak
+                    ):
+                        self.x_terbaik = calon_terbaik
+                        self.iterasi_rekor = iterasi
+                        iter_tanpa_rekor = 0
+                        x = self.x_terbaik.copy()
+                        x.siapkan_armada()
+
+                        if self.tampilkan_setiap:
+                            print(
+                                f"  Iterasi {iterasi:>5} | sekarang {x.total_jarak:>5} "
+                                f"| terbaik {self.x_terbaik.total_jarak:>5} | REKOR BARU "
+                                f"({nama_d[:6]}+{nama_r[:6]})"
+                            )
 
             # Reheating mechanism saat stagnasi (Ropke & Pisinger 2006; Hemmelmayr et al. 2012)
             if (

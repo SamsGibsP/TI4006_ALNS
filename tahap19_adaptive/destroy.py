@@ -18,6 +18,7 @@ Dua operator disediakan di sini. Nanti Anda bisa menambah sendiri
 ===============================================================================
 """
 
+import heapq
 import random
 
 
@@ -173,15 +174,17 @@ class DestroyOperator:
                 same_route_cost = 0.0 if node_route.get(nid) == ref_r else psi
                 return d_row[nid] * factor_d + abs(ref_demand - demands[nid]) * factor_q + same_route_cost
 
-            # Urutkan kandidat dari yang nilai R-nya terkecil (paling mirip)
-            tersisa.sort(key=hitung_r)
-
-            # Pilih node menggunakan keacakan terkontrol: idx = int((random.random() ** p) * len(tersisa))
+            # Tentukan indeks acak terlebih dahulu sesuai rank-biased selection
             idx = int((random.random() ** p) * len(tersisa))
             if idx >= len(tersisa):
                 idx = len(tersisa) - 1
 
-            terpilih_id = tersisa[idx]
+            # Ambil elemen ke-idx tanpa harus mengurutkan seluruh tersisa O(N log N)
+            if idx == 0:
+                terpilih_id = min(tersisa, key=hitung_r)
+            else:
+                terpilih_id = heapq.nsmallest(idx + 1, tersisa, key=hitung_r)[-1]
+
             bank.append(solusi.keluarkan(terpilih_id))
 
         return bank

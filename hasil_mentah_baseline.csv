@@ -1,31 +1,46 @@
-instance,seed,konfigurasi,jarak,waktu_detik,status
-X-n101-k25 (K=25),1,Baseline,29531,0.69,LAYAK
-X-n101-k25 (K=25),2,Baseline,29632,0.68,LAYAK
-X-n101-k25 (K=25),3,Baseline,29023,0.63,LAYAK
-X-n101-k25 (K=25),4,Baseline,29493,0.65,LAYAK
-X-n101-k25 (K=25),5,Baseline,28728,0.63,LAYAK
-X-n143-k7 (K=7),1,Baseline,16700,1.66,LAYAK
-X-n143-k7 (K=7),2,Baseline,16285,1.64,LAYAK
-X-n143-k7 (K=7),3,Baseline,16829,1.57,LAYAK
-X-n143-k7 (K=7),4,Baseline,16723,1.61,LAYAK
-X-n143-k7 (K=7),5,Baseline,16129,1.62,LAYAK
-X-n351-k40 (K=40),1,Baseline,37103,1.97,LAYAK
-X-n351-k40 (K=40),2,Baseline,36486,2.24,LAYAK
-X-n351-k40 (K=40),3,Baseline,37001,2.19,LAYAK
-X-n351-k40 (K=40),4,Baseline,36549,2.07,LAYAK
-X-n351-k40 (K=40),5,Baseline,36854,2.09,LAYAK
-X-n101-k25 (K=25),1,Full,29403,0.80,LAYAK
-X-n101-k25 (K=25),2,Full,29497,0.84,LAYAK
-X-n101-k25 (K=25),3,Full,28756,0.79,LAYAK
-X-n101-k25 (K=25),4,Full,29365,0.81,LAYAK
-X-n101-k25 (K=25),5,Full,28988,0.79,LAYAK
-X-n143-k7 (K=7),1,Full,16220,1.97,LAYAK
-X-n143-k7 (K=7),2,Full,16345,2.10,LAYAK
-X-n143-k7 (K=7),3,Full,16631,1.97,LAYAK
-X-n143-k7 (K=7),4,Full,16664,1.89,LAYAK
-X-n143-k7 (K=7),5,Full,16821,1.82,LAYAK
-X-n351-k40 (K=40),1,Full,33749,7.94,LAYAK
-X-n351-k40 (K=40),2,Full,34238,8.16,LAYAK
-X-n351-k40 (K=40),3,Full,34392,6.84,LAYAK
-X-n351-k40 (K=40),4,Full,34976,7.25,LAYAK
-X-n351-k40 (K=40),5,Full,31900,7.72,LAYAK
+instance,seed,konfigurasi,jarak,waktu_detik,status,jumlah_rute
+X-n101-k25,1,Ablation_Baseline,28018,1.03,LAYAK,26
+X-n101-k25,2,Ablation_Baseline,28119,1.10,LAYAK,26
+X-n101-k25,3,Ablation_Baseline,28264,1.40,LAYAK,27
+X-n101-k25,4,Ablation_Baseline,27998,1.40,LAYAK,27
+X-n101-k25,5,Ablation_Baseline,28483,1.47,LAYAK,27
+X-n143-k7,1,Ablation_Baseline,16070,9.52,LAYAK,7
+X-n143-k7,2,Ablation_Baseline,16213,7.40,LAYAK,7
+X-n143-k7,3,Ablation_Baseline,15913,7.18,LAYAK,7
+X-n143-k7,4,Ablation_Baseline,16469,7.09,LAYAK,7
+X-n143-k7,5,Ablation_Baseline,16350,7.08,LAYAK,7
+X-n351-k40,1,Ablation_Baseline,26583,7.54,LAYAK,41
+X-n351-k40,2,Ablation_Baseline,27123,7.86,LAYAK,41
+X-n351-k40,3,Ablation_Baseline,27123,8.97,LAYAK,41
+X-n351-k40,4,Ablation_Baseline,26877,9.86,LAYAK,41
+X-n351-k40,5,Ablation_Baseline,26911,9.53,LAYAK,41
+X-n101-k25,1,Original_Tahap19_Baseline,28103,1.60,LAYAK,27
+X-n101-k25,2,Original_Tahap19_Baseline,28277,1.68,LAYAK,27
+X-n101-k25,3,Original_Tahap19_Baseline,28185,1.71,LAYAK,27
+X-n101-k25,4,Original_Tahap19_Baseline,28129,1.61,LAYAK,27
+X-n101-k25,5,Original_Tahap19_Baseline,28279,1.65,LAYAK,27
+X-n143-k7,1,Original_Tahap19_Baseline,15958,6.24,LAYAK,7
+X-n143-k7,2,Original_Tahap19_Baseline,15911,6.15,LAYAK,7
+X-n143-k7,3,Original_Tahap19_Baseline,15930,6.05,LAYAK,7
+X-n143-k7,4,Original_Tahap19_Baseline,15942,5.37,LAYAK,7
+X-n143-k7,5,Original_Tahap19_Baseline,15860,5.35,LAYAK,7
+X-n351-k40,1,Original_Tahap19_Baseline,26899,13.44,LAYAK,41
+X-n351-k40,2,Original_Tahap19_Baseline,26780,12.53,LAYAK,41
+X-n351-k40,3,Original_Tahap19_Baseline,26851,12.62,LAYAK,41
+X-n351-k40,4,Original_Tahap19_Baseline,26624,14.32,LAYAK,41
+X-n351-k40,5,Original_Tahap19_Baseline,26897,12.53,LAYAK,41
+X-n101-k25,1,Full,28103,2.07,LAYAK,27
+X-n101-k25,2,Full,28277,2.02,LAYAK,27
+X-n101-k25,3,Full,28185,2.12,LAYAK,27
+X-n101-k25,4,Full,28129,1.96,LAYAK,27
+X-n101-k25,5,Full,28279,1.99,LAYAK,27
+X-n143-k7,1,Full,16259,9.57,LAYAK,7
+X-n143-k7,2,Full,16147,11.14,LAYAK,7
+X-n143-k7,3,Full,16093,11.08,LAYAK,7
+X-n143-k7,4,Full,15790,10.88,LAYAK,7
+X-n143-k7,5,Full,15757,11.59,LAYAK,7
+X-n351-k40,1,Full,26899,14.26,LAYAK,41
+X-n351-k40,2,Full,26780,14.88,LAYAK,41
+X-n351-k40,3,Full,26851,13.89,LAYAK,41
+X-n351-k40,4,Full,26624,13.51,LAYAK,41
+X-n351-k40,5,Full,26897,13.88,LAYAK,41

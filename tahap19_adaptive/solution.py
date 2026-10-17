@@ -69,53 +69,64 @@ class Solution:
     # =====================================================================
     def daftar_pelanggaran(self):
         masalah = []
+        rute_aktif = [r for r in self.daftar_rute if len(r.daftar_visit) > 0]
 
-        # 1. Tiap rute terisi tidak boleh melebihi kapasitas
-        for i, r in enumerate(self.rute, start=1):
-            if r.total_muatan > self.instance.kapasitas:
-                masalah.append(f"Rute {i} kelebihan muatan: "
-                               f"{r.total_muatan} > {self.instance.kapasitas}")
+        # 1. Batas armada diperiksa secara ketat
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        if batas_k is None:
+            batas_k = getattr(self.instance, "batas_armada", None)
+        if batas_k is not None and len(rute_aktif) > batas_k:
+            masalah.append(f"Jumlah rute aktif ({len(rute_aktif)}) melebihi batas armada ({batas_k})")
 
-        # 2. Semua pelanggan harus dilayani tepat satu kali
-        dikunjungi = self.nomor_dikunjungi()
-        seharusnya = [n.nomor for n in self.instance.pelanggan]
+        # 2. Tiap rute terisi tidak boleh melebihi kapasitas
+        cap = self.instance.kapasitas
+        for i, r in enumerate(rute_aktif, start=1):
+            if r.total_muatan > cap:
+                masalah.append(f"Rute {i} kelebihan muatan: {r.total_muatan} > {cap}")
 
-        belum = [n for n in seharusnya if n not in dikunjungi]
+        # 3. Semua pelanggan harus dilayani tepat satu kali dan tidak ada ID asing
+        pelanggan_seharusnya = {p.nomor for p in self.instance.pelanggan}
+        dikunjungi = [node_id for r in rute_aktif for node_id in r.nomor_node()]
+        set_dikunjungi = set(dikunjungi)
+
+        belum = [n for n in pelanggan_seharusnya if n not in set_dikunjungi]
         if belum:
             masalah.append(f"{len(belum)} pelanggan belum dilayani: {belum}")
 
-        if len(dikunjungi) != len(set(dikunjungi)):
+        if len(dikunjungi) != len(set_dikunjungi):
             masalah.append("Ada pelanggan yang dikunjungi lebih dari sekali")
 
-        # 3. Batas armada maksimum (hanya diperiksa jika batas_armada diset kaku)
-        rute_aktif = len(self.rute)
-        if self.instance.batas_armada is not None and rute_aktif > self.instance.batas_armada:
-            masalah.append(f"Butuh {rute_aktif} rute terisi, "
-                           f"armada maksimal {self.instance.batas_armada}")
+        asing = [n for n in set_dikunjungi if n not in pelanggan_seharusnya]
+        if asing:
+            masalah.append(f"Ada ID node asing yang bukan pelanggan: {asing}")
 
         return masalah
 
     def layak(self):
-        # 1. Cek batas atas armada kendaraan jika ada batas kaku
-        if self.instance.batas_armada is not None and len(self.rute) > self.instance.batas_armada:
+        rute_aktif = [r for r in self.daftar_rute if len(r.daftar_visit) > 0]
+        pelanggan_seharusnya = {p.nomor for p in self.instance.pelanggan}
+
+        # 1. Cek batas armada ketat terhadap self.instance.jumlah_kendaraan
+        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
+        if batas_k is None:
+            batas_k = getattr(self.instance, "batas_armada", None)
+        if batas_k is not None and len(rute_aktif) > batas_k:
             return False
 
-        # 2. Cek kapasitas tiap rute
+        # 2. Cek kapasitas tiap rute aktif
         cap = self.instance.kapasitas
-        for r in self.rute:
-            if r.total_muatan > cap:
-                return False
-
-        # 3. Cek semua pelanggan terlayani tepat satu kali
-        dikunjungi = []
-        for r in self.rute:
-            dikunjungi.extend(r.nomor_node())
-
-        n_pel = len(self.instance.pelanggan)
-        if len(dikunjungi) != n_pel or len(set(dikunjungi)) != n_pel:
+        if any(r.total_muatan > cap for r in rute_aktif):
             return False
 
-        return True
+        # 3. Cek pemenuhan tepat satu kali untuk seluruh pelanggan yang seharusnya
+        dikunjungi = [node_id for r in rute_aktif for node_id in r.nomor_node()]
+
+        return (
+            len(dikunjungi) == len(pelanggan_seharusnya)
+            and len(dikunjungi) == len(set(dikunjungi))
+            and set(dikunjungi) == pelanggan_seharusnya
+        )
+
 
     # =====================================================================
     # MEMBUAT SALINAN
