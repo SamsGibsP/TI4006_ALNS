@@ -78,38 +78,67 @@ def coded_to_natural(coded):
     return natural
 
 
-def solve_ols_gauss_jordan(X, y):
-    N = len(X)
-    P = len(X[0])
-    XtX = [[sum(X[r][i] * X[r][j] for r in range(N)) for j in range(P)] for i in range(P)]
-    Xty = [sum(X[r][i] * y[r] for r in range(N)) for i in range(P)]
+try:
+    import numpy as np  # type: ignore
+    from scipy import stats  # type: ignore
+    from scipy.optimize import minimize  # type: ignore
+    from sklearn.linear_model import LinearRegression  # type: ignore
+    HAS_SCIENTIFIC = True
+except ImportError:
+    HAS_SCIENTIFIC = False
 
-    Aug = [XtX[i][:] + [Xty[i]] for i in range(P)]
-    for i in range(P):
-        pivot = max(range(i, P), key=lambda r: abs(Aug[r][i]))
-        Aug[i], Aug[pivot] = Aug[pivot], Aug[i]
-        diag = Aug[i][i]
-        if abs(diag) < 1e-12:
-            diag = 1e-12
-        for j in range(i, P + 1):
-            Aug[i][j] /= diag
-        for r in range(P):
-            if r != i:
-                factor = Aug[r][i]
-                for j in range(i, P + 1):
-                    Aug[r][j] -= factor * Aug[i][j]
 
-    beta = [Aug[i][-1] for i in range(P)]
-    y_mean = sum(y) / N
-    ss_tot = sum((val - y_mean) ** 2 for val in y)
-    y_pred = [
-        sum(X[r][j] * beta[j] for j in range(P))
-        for r in range(N)
-    ]
-    ss_res = sum((y[i] - y_pred[i]) ** 2 for i in range(N))
-    r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
-    r2_adj = 1.0 - ((ss_res / (N - P)) / (ss_tot / (N - 1))) if ss_tot > 0 and N > P else r2
-    return beta, r2, r2_adj
+def solve_ols_scikit(X, y):
+    X_arr = np.array(X, dtype=float)
+    y_arr = np.array(y, dtype=float)
+    N, P = X_arr.shape
+
+    reg = LinearRegression(fit_intercept=False).fit(X_arr, y_arr)
+    beta = [float(c) for c in reg.coef_]
+
+    y_pred = reg.predict(X_arr)
+    ss_tot = float(np.sum((y_arr - np.mean(y_arr)) ** 2))
+    ss_res = float(np.sum((y_arr - y_pred) ** 2))
+    ss_reg = max(0.0, ss_tot - ss_res)
+    df_reg = P - 1
+    df_res = N - P
+
+    r2 = max(0.0, 1.0 - (ss_res / ss_tot)) if ss_tot > 0 else 0.0
+    r2_adj = (
+        max(0.0, 1.0 - ((ss_res / max(1, df_res)) / (ss_tot / max(1, N - 1))))
+        if ss_tot > 0 and df_res > 0
+        else r2
+    )
+
+    ms_reg = ss_reg / max(1, df_reg)
+    ms_res = ss_res / max(1, df_res)
+    f_stat = float(ms_reg / ms_res) if ms_res > 0 else 0.0
+    p_model = float(stats.f.sf(f_stat, df_reg, df_res)) if ms_res > 0 and df_res > 0 else 1.0
+
+    try:
+        cov_beta = ms_res * np.linalg.inv(X_arr.T @ X_arr)
+        se_beta = [float(np.sqrt(max(0.0, cov_beta[i, i]))) for i in range(P)]
+        t_stat_beta = [
+            float(beta[i] / se_beta[i]) if se_beta[i] > 1e-12 else 0.0
+            for i in range(P)
+        ]
+        p_val_beta = [
+            float(2.0 * stats.t.sf(abs(t), df_res)) if df_res > 0 else 1.0
+            for t in t_stat_beta
+        ]
+    except Exception:
+        se_beta = [0.0] * P
+        t_stat_beta = [0.0] * P
+        p_val_beta = [1.0] * P
+
+    stat_dict = {
+        "f_stat": f_stat,
+        "p_model": p_model,
+        "se_beta": se_beta,
+        "t_stat_beta": t_stat_beta,
+        "p_val_beta": p_val_beta,
+    }
+    return beta, r2, r2_adj, stat_dict
 
 
 def main():
@@ -197,11 +226,22 @@ def main():
 
     durasi_rsm = time.time() - t_mulai
 
-    # 2. Fit Model Regresi Kuadratik
-    beta, r2, r2_adj = solve_ols_gauss_jordan(X_mat, y_mean_gap)
+    # 2. Fit Model Regresi Kuadratik via scikit-learn
+    beta, r2, r2_adj, stat_dict = solve_ols_scikit(X_mat, y_mean_gap)
+
+    # Analisis Kanonikal Matriks Hessian
+    B = np.array([
+        [beta[4], 0.5 * beta[7], 0.5 * beta[8]],
+        [0.5 * beta[7], beta[5], 0.5 * beta[9]],
+        [0.5 * beta[8], 0.5 * beta[9], beta[6]]
+    ], dtype=float)
+    b_vec = np.array([beta[1], beta[2], beta[3]], dtype=float)
+    eigvals, _ = np.linalg.eig(B)
+    real_eigvals = [float(v.real) for v in eigvals]
 
     print("\n" + "=" * 80)
     print(" MODEL RESPONSE SURFACE GABUNGAN (MULTI-INSTANCE)")
+    print(" (Solver: scikit-learn LinearRegression & scipy.optimize L-BFGS-B)")
     print("=" * 80)
     print(f"  Fungsi Respon: Y_pred (% Mean Gap ke BKS)")
     print(f"    Y_pred = {beta[0]:.2f}")
@@ -209,8 +249,10 @@ def main():
     print(f"             + ({beta[4]:.2f}*x1^2) + ({beta[5]:.2f}*x2^2) + ({beta[6]:.2f}*x3^2)")
     print(f"             + ({beta[7]:.2f}*x1*x2) + ({beta[8]:.2f}*x1*x3) + ({beta[9]:.2f}*x2*x3)")
     print(f"  Kualitas Model: R^2 = {r2*100:.2f}% | Adjusted R^2 = {r2_adj*100:.2f}%")
+    print(f"  Model ANOVA   : F-statistic = {stat_dict['f_stat']:.2f} (p-value = {stat_dict['p_model']:.4e})")
+    print(f"  Eigenvalues B : [{real_eigvals[0]:.2f}, {real_eigvals[1]:.2f}, {real_eigvals[2]:.2f}]")
 
-    # 3. Pencarian Titik Minimum Global Terkode [-1, +1]^3
+    # 3. Pencarian Titik Minimum Global Kontinu Eksak via scipy.optimize (L-BFGS-B)
     def predict_gap(c_pt):
         x1, x2, x3 = c_pt
         b = beta
@@ -220,27 +262,32 @@ def main():
             + b[7]*(x1*x2) + b[8]*(x1*x3) + b[9]*(x2*x3)
         )
 
-    best_gap = float("inf")
-    best_c = (0.0, 0.0, 0.0)
-    grid_res = [round(-1.0 + i * 0.05, 3) for i in range(41)]
-    for x1 in grid_res:
-        for x2 in grid_res:
-            for x3 in grid_res:
-                g_hat = predict_gap((x1, x2, x3))
-                if g_hat < best_gap:
-                    best_gap = g_hat
-                    best_c = (x1, x2, x3)
+    bounds = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
+    restarts = [
+        [0.0, 0.0, 0.0],
+        [-1.0, -1.0, -1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, -1.0], [1.0, 1.0, -1.0],
+        [-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [-1.0, 1.0, 1.0], [1.0, 1.0, 1.0]
+    ]
 
+    best_gap = float("inf")
+    best_res = None
+    for x0 in restarts:
+        res = minimize(predict_gap, x0=x0, method="L-BFGS-B", bounds=bounds)
+        if res.fun < best_gap:
+            best_gap = float(res.fun)
+            best_res = res
+
+    best_c = tuple(round(float(x), 4) for x in best_res.x)
     opt_natural = coded_to_natural(best_c)
 
     print("\n" + "=" * 80)
-    print(" 1 SET PARAMETER OPTIMUM UNIVERSAL (UNTUK SEMUA INSTANCE)")
+    print(" 1 SET PARAMETER OPTIMUM UNIVERSAL KONTINU (UNTUK SEMUA INSTANCE)")
     print("=" * 80)
-    print(f"  Titik Coded Optimum (x*) : x1={best_c[0]:+.2f}, x2={best_c[1]:+.2f}, x3={best_c[2]:+.2f}")
-    print(f"  * SUHU AWAL (suhu_awal)          : {opt_natural['suhu_awal']:.1f}")
+    print(f"  Titik Coded Optimum (x*) : x1={best_c[0]:+.4f}, x2={best_c[1]:+.4f}, x3={best_c[2]:+.4f}")
+    print(f"  * SUHU AWAL (suhu_awal)               : {opt_natural['suhu_awal']:.1f}")
     print(f"  * LAJU PENDINGINAN (laju_pendinginan) : {opt_natural['laju_pendinginan']:.4f}")
-    print(f"  * REACTION FACTOR (reaction_factor)  : {opt_natural['reaction_factor']:.4f}")
-    print(f"  * Prediksi Rata-rata Gap Optimum     : +{best_gap:.2f}%")
+    print(f"  * REACTION FACTOR (reaction_factor)   : {opt_natural['reaction_factor']:.4f}")
+    print(f"  * Prediksi Rata-rata Gap Optimum      : +{best_gap:.2f}%")
     print("=" * 80)
 
     # 4. Validasi 5 Seed pada Ketiga Instance menggunakan 1 Set Parameter ini

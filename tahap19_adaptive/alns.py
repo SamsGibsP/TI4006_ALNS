@@ -119,7 +119,7 @@ class ALNS:
         self.perusak = DestroyOperator(instance)
         self.pembaik = RepairOperator(instance)
         self.local_search = LocalSearch(
-            instance, operators=["two_opt", "relocate", "swap"], max_iterations=30
+            instance, operators=["two_opt", "relocate", "swap"], max_iterations=100
         )
 
         # Tentukan daftar operator aktif berdasarkan sakelar ablasi
@@ -346,7 +346,7 @@ class ALNS:
                     x = kandidat
                     self.jumlah_diterima += 1
 
-                # Pembaruan rekor dan pemolesan Local Search (Slide 5: Pemoles tiap rekor baru)
+                # Pembaruan rekor dan pemolesan Local Search
                 # Wajib memanggil kandidat.layak() terlebih dahulu agar solusi tidak layak
                 # tidak pernah dipoles oleh Local Search atau disimpan sebagai x_terbaik.
                 if is_layak and kandidat.total_jarak < self.x_terbaik.total_jarak:
@@ -377,7 +377,7 @@ class ALNS:
                                 f"({nama_d[:6]}+{nama_r[:6]})"
                             )
 
-            # Reheating mechanism saat stagnasi (Ropke & Pisinger 2006; Hemmelmayr et al. 2012)
+            # Reheating mechanism saat stagnasi
             if (
                 self.pakai_reheating
                 and not self.mode_random_search
