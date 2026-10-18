@@ -52,7 +52,7 @@ stats.strip_dirs()
 stats.sort_stats("tottime")
 stats.print_stats(30)
 
-target_output = os.path.join(folder_tahap19, "profile_n351.txt")
+target_output = os.path.join(dir_hasil_final, "profile_n351.txt")
 with open(target_output, "w", encoding="utf-8") as f:
     f.write(output_buffer.getvalue())
 

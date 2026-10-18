@@ -114,10 +114,7 @@ def main():
                 status = "LAYAK" if is_layak else "TIDAK_LAYAK"
                 row = [nama_inst, seed, cfg_name, jarak, f"{t_selesai:.2f}", status, rute_aktif]
 
-                for w in [w_root, w_local, w_final]:
-                    w.writerow(row)
-                f_raw_root.flush()
-                f_raw_local.flush()
+                w_final.writerow(row)
                 f_raw_final.flush()
 
                 jarak_seed.append(jarak)
