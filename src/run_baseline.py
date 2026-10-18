@@ -64,22 +64,12 @@ def main():
     print(f" Iterasi: {MAKS_ITERASI} | Seed: {SEEDS}")
     print("=" * 115)
 
-    path_raw_root = os.path.join(dir_root, "hasil_mentah_baseline.csv")
-    path_raw_local = os.path.join(folder_tahap19, "hasil_mentah_baseline.csv")
     path_raw_final = os.path.join(dir_hasil_final, "hasil_mentah_baseline.csv")
-
     headers_raw = ["instance", "seed", "konfigurasi", "jarak", "waktu_detik", "status", "jumlah_rute"]
 
-    f_raw_root = open(path_raw_root, "w", newline="", encoding="utf-8")
-    f_raw_local = open(path_raw_local, "w", newline="", encoding="utf-8")
     f_raw_final = open(path_raw_final, "w", newline="", encoding="utf-8")
-
-    w_root = csv.writer(f_raw_root)
-    w_local = csv.writer(f_raw_local)
     w_final = csv.writer(f_raw_final)
-
-    for w in [w_root, w_local, w_final]:
-        w.writerow(headers_raw)
+    w_final.writerow(headers_raw)
 
     hasil_rekap = []
 
@@ -156,8 +146,6 @@ def main():
                 "Waktu Avg (s)": f"{waktu_avg:.2f}",
             })
 
-    f_raw_root.close()
-    f_raw_local.close()
     f_raw_final.close()
 
     print("\n" + "=" * 125, flush=True)
@@ -169,17 +157,15 @@ def main():
         print(f" {r['Konfigurasi']:<26} | {r['Instance']:<12} | {r['BKS']:>6} | {r['Terbaik']:>7} | {r['Rata-rata']:>9} | {r['Terburuk']:>8} | {r['Std']:>8} | {r['Gap Best (%)']:>9} | {r['Gap Avg (%)']:>8} | {r['Waktu Avg (s)']:>9}")
     print("=" * 125, flush=True)
 
-    # Simpan ke rekap_komparasi_vs_full.csv
-    path_rekap_root = os.path.join(dir_root, "rekap_komparasi_vs_full.csv")
-    path_rekap_local = os.path.join(folder_tahap19, "rekap_komparasi_vs_full.csv")
+    # Simpan ke rekap_komparasi_vs_full.csv di folder hasil_final tunggal
     path_rekap_final = os.path.join(dir_hasil_final, "rekap_komparasi_vs_full.csv")
 
     headers_rekap = ["Konfigurasi", "Instance", "BKS", "Terbaik", "Rata-rata", "Terburuk", "Std", "Gap Best (%)", "Gap Avg (%)", "Waktu Avg (s)"]
-    for p in [path_rekap_root, path_rekap_local, path_rekap_final]:
-        with open(p, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=headers_rekap)
-            w.writeheader()
-            w.writerows(hasil_rekap)
+    with open(path_rekap_final, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=headers_rekap)
+        w.writeheader()
+        w.writerows(hasil_rekap)
+    print(f"\n[OK] Rekap komparasi disimpan di: {path_rekap_final}")
 
 
 if __name__ == "__main__":
