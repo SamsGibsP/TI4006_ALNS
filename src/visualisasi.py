@@ -46,8 +46,10 @@ from cvrp_instance import CVRPInstance
 def plot_probabilitas_operator(pencari, instance_name="X-n101-k25", output_path="grafik_probabilitas_operator.png"):
     """
     Menghasilkan grafik probabilitas adaptif operator terhadap iterasi
-    (PERSIS seperti Fig. 6 pada paper Ropke & Pisinger / Turkes et al.).
     """
+    if plt is None:
+        print("[WARN] matplotlib tidak terpasang.")
+        return
     riwayat = pencari.riwayat_bobot
     if not riwayat:
         print("[WARN] Riwayat bobot kosong.")
@@ -114,6 +116,9 @@ def plot_konvergensi(riwayat_baseline, riwayat_full, bks, instance_name="X-n101-
     """
     Kurva konvergensi perbandingan Baseline vs Full ALNS (4 Modifikasi).
     """
+    if plt is None:
+        print("[WARN] matplotlib tidak terpasang.")
+        return
     plt.figure(figsize=(10, 6))
     plt.plot(riwayat_baseline, label="Baseline ALNS (Tanpa Modifikasi)", color="#d62728", linestyle="--", linewidth=1.8, alpha=0.8)
     plt.plot(riwayat_full, label="Full ALNS (4 Modifikasi)", color="#1f77b4", linewidth=2.2)
@@ -135,6 +140,9 @@ def plot_studi_ablasi(data_ablasi_semua, output_path="grafik_studi_ablasi.png"):
     Diagram batang perbandingan performa studi ablasi untuk 3 instance sekaligus dalam 1 grafik (Slide 8).
     Format 3-panel berdampingan dengan skala optimal masing-masing.
     """
+    if plt is None:
+        print("[WARN] matplotlib tidak terpasang.")
+        return
     fig, axes = plt.subplots(1, 3, figsize=(16, 5.5))
     fig.patch.set_facecolor('#ffffff')
 
@@ -176,6 +184,9 @@ def plot_studi_ablasi_grouped(data_ablasi_semua, output_path="grafik_studi_ablas
     """
     Diagram batang berkelompok (Clustered Bar Chart) 3 instance dalam 1 grafik sumbu tunggal.
     """
+    if plt is None:
+        print("[WARN] matplotlib tidak terpasang.")
+        return
     labels = [d["konfigurasi"] for d in data_ablasi_semua["X-n101-k25"]]
     n_labels = len(labels)
     x_indices = list(range(n_labels))
@@ -213,6 +224,9 @@ def plot_rute_solusi(solusi, output_path="grafik_rute_solusi.png"):
     """
     Plot koordinat geografis depot dan pelanggan beserta 26 rute kendaraan.
     """
+    if plt is None:
+        print("[WARN] matplotlib tidak terpasang.")
+        return
     plt.figure(figsize=(9, 8))
     depot = solusi.instance.depot
     rute_aktif = solusi.rute
@@ -240,6 +254,9 @@ def plot_rute_solusi(solusi, output_path="grafik_rute_solusi.png"):
 
 
 def main():
+    if plt is None:
+        print("[ERROR] matplotlib tidak terpasang.")
+        return
     print("=" * 80)
     print(" PEMBUATAN GRAFIK VISUALISASI MODIFIKASI ALNS (PUBLIKASI ILMIAH)")
     print("=" * 80)

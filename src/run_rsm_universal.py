@@ -85,10 +85,16 @@ try:
     from sklearn.linear_model import LinearRegression  # type: ignore
     HAS_SCIENTIFIC = True
 except ImportError:
+    np = None  # type: ignore
+    stats = None  # type: ignore
+    minimize = None  # type: ignore
+    LinearRegression = None  # type: ignore
     HAS_SCIENTIFIC = False
 
 
 def solve_ols_scikit(X, y):
+    if not HAS_SCIENTIFIC or np is None or LinearRegression is None or stats is None:
+        raise RuntimeError("Scientific stack (numpy, scipy, scikit-learn) tidak tersedia.")
     X_arr = np.array(X, dtype=float)
     y_arr = np.array(y, dtype=float)
     N, P = X_arr.shape
@@ -142,6 +148,10 @@ def solve_ols_scikit(X, y):
 
 
 def main():
+    if not HAS_SCIENTIFIC or np is None or minimize is None:
+        print("[ERROR] SciPy/NumPy/Scikit-learn diperlukan untuk RSM Universal.")
+        return
+
     print("=" * 80)
     print(" MULTI-INSTANCE RESPONSE SURFACE METHODOLOGY (RSM)")
     print(" PENCARIAN SATU SET PARAMETER OPTIMUM UNTUK SELURUH INSTANCE")
@@ -150,7 +160,7 @@ def main():
     # 1. Muat Seluruh Instance dan Solusi Awal
     instances_data = []
     for item in INSTANCES_CONFIG:
-        path_vrp = os.path.join(folder_tahap19, "X", item["nama"])
+        path_vrp = os.path.join(folder_tahap19, "X", str(item["nama"]))
         daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
         inst = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
         sol_awal = ConstructionHeuristic(inst).clarke_wright_savings()
@@ -276,6 +286,10 @@ def main():
         if res.fun < best_gap:
             best_gap = float(res.fun)
             best_res = res
+
+    if best_res is None or getattr(best_res, "x", None) is None:
+        print("[ERROR] Optimasi tidak menghasilkan solusi.")
+        return
 
     best_c = tuple(round(float(x), 4) for x in best_res.x)
     opt_natural = coded_to_natural(best_c)

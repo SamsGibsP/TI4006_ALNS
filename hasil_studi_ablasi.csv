@@ -1,7 +1,0 @@
-konfigurasi,keterangan,terbaik,rata_rata,terburuk,std_dev,gap_best_persen,gap_mean_persen,delta_vs_full,waktu_avg_detik
-Full ALNS,Semua 4 Modifikasi Aktif,28615,29120.60,30163,555.52,3.71%,5.54%,0.00,0.70
-Tanpa Shaw,Hapus Shaw Removal (Hanya Random & Worst),29017,29509.20,30051,417.83,5.17%,6.95%,388.60,0.57
-Tanpa Regret-3,Hapus Regret-3 (Hanya Greedy & Regret-2),28941,29330.20,30121,424.05,4.89%,6.30%,209.60,0.68
-Tanpa Local Search,Hapus Pemolesan Rekor Local Search,28607,29075.40,29626,387.18,3.68%,5.38%,-45.20,0.58
-Tanpa Reheating,Hapus Mekanisme Reheating Suhu SA,28613,28966.60,29549,354.30,3.70%,4.99%,-154.00,0.70
-Baseline,ALNS Standar Tanpa Modifikasi,29747,30002.20,30426,240.80,7.81%,8.74%,881.60,0.43

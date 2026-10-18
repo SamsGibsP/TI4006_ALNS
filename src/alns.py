@@ -216,7 +216,8 @@ class ALNS:
             return True
 
         selisih = jarak_baru - jarak_sekarang
-        peluang = math.exp(-selisih / max(self.suhu, 1e-6))
+        suhu_efektif = self.suhu if self.suhu is not None else 1.0
+        peluang = math.exp(-selisih / max(suhu_efektif, 1e-6))
 
         if random.random() < peluang:
             self.jumlah_lebih_buruk += 1

@@ -163,9 +163,9 @@ class TestOperatorsAndContracts(unittest.TestCase):
         pembaik = RepairOperator(self.instance)
         # Pasang operator buggy yang sengaja melempar TypeError internal
         def buggy_repair(solusi, bank, **kwargs):
-            return "string" + 123  # TypeError asli di dalam fungsi
+            raise TypeError("TypeError internal buatan")
 
-        pembaik.buggy_repair = buggy_repair
+        setattr(pembaik, "buggy_repair", buggy_repair)
         sol = Solution(self.instance)
         with self.assertRaises(TypeError):
             pembaik.jalankan("buggy_repair", sol, [])
@@ -267,20 +267,22 @@ class TestALNSIterationBookkeeping(unittest.TestCase):
         counter = {"count": 0}
         asli_jalankan = alns.pembaik.jalankan
 
-        def mock_jalankan(nama, solusi, bank, **kwargs):
+        def mock_jalankan(nama, solusi, bank, pakai_noise=False, tingkat_noise=0.1, **kwargs):
             counter["count"] += 1
             if counter["count"] % 2 == 0:
                 # Simulasikan kegagalan repair
                 return False
-            return asli_jalankan(nama, solusi, bank, **kwargs)
+            return asli_jalankan(nama, solusi, bank, pakai_noise=pakai_noise, tingkat_noise=tingkat_noise, **kwargs)
 
-        alns.pembaik.jalankan = mock_jalankan
+        alns.pembaik.jalankan = mock_jalankan  # type: ignore
         alns.jalankan(sol_awal)
 
         # Invarian 1: Riwayat konvergensi tetap harus persis N iterasi
         self.assertEqual(len(alns.riwayat_terbaik), N)
         # Invarian 2: Suhu harus terdinginkan sesuai jadwal penuh N kali: T = T0 * (laju ^ N)
         suhu_harapan = 100.0 * (0.9 ** N)
+        self.assertIsNotNone(alns.suhu)
+        assert alns.suhu is not None
         self.assertAlmostEqual(alns.suhu, suhu_harapan, places=4)
         # Invarian 3: Jumlah gagal terhitung secara diagnostik
         self.assertGreater(alns.jumlah_gagal, 0)
@@ -306,6 +308,8 @@ class TestALNSIterationBookkeeping(unittest.TestCase):
         alns.jalankan(sol_awal)
 
         self.assertEqual(len(alns.riwayat_terbaik), 25)
+        self.assertIsNotNone(alns.suhu)
+        assert alns.suhu is not None
         self.assertGreaterEqual(alns.suhu, 1000.0 * (0.8 ** 25))
 
     def test_reproducibility_same_seed_identical_trajectory(self):

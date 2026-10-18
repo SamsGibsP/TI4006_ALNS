@@ -33,6 +33,10 @@ try:
     from sklearn.linear_model import LinearRegression  # type: ignore
     HAS_SCIENTIFIC = True
 except ImportError:
+    np = None  # type: ignore
+    stats = None  # type: ignore
+    minimize = None  # type: ignore
+    LinearRegression = None  # type: ignore
     HAS_SCIENTIFIC = False
 
 from alns import ALNS
@@ -67,7 +71,7 @@ class ResponseSurfaceMethodology:
 
         self.design_points = self._generate_box_behnken()
         self.hasil_eksperimen = []
-        self.beta = None
+        self.beta = [0.0] * 10
         self.r2 = 0.0
         self.r2_adj = 0.0
         self.f_stat = 0.0
@@ -209,6 +213,8 @@ class ResponseSurfaceMethodology:
         y = b0 + b1*x1 + b2*x2 + b3*x3 + b11*x1^2 + b22*x2^2 + b33*x3^2 + b12*x1*x2 + b13*x1*x3 + b23*x2*x3
         Dilengkapi penghitungan ANOVA dan uji signifikansi koefisien (t-test & p-value).
         """
+        if not HAS_SCIENTIFIC or np is None or LinearRegression is None or stats is None:
+            return
         N = len(self.design_points)
         X = []
         for x1, x2, x3 in self.design_points:
@@ -271,6 +277,8 @@ class ResponseSurfaceMethodology:
         Analisis kanonikal model kuadratik orde-2 (Montgomery, Design & Analysis of Experiments):
         Mengevaluasi matriks Hessian B untuk menentukan sifat kelengkungan (curvature) permukaan.
         """
+        if not HAS_SCIENTIFIC or np is None:
+            return
         b = self.beta
         B = np.array([
             [b[4], 0.5 * b[7], 0.5 * b[8]],
@@ -320,6 +328,9 @@ class ResponseSurfaceMethodology:
         Mencari titik minimum kontinu eksak dari persamaan kuadratik di dalam domain terkode [-1, +1]^3
         menggunakan optimasi non-linear berkendala scipy.optimize.minimize (metode L-BFGS-B).
         """
+        if not HAS_SCIENTIFIC or minimize is None:
+            return
+
         def obj(c):
             return self.prediksi_coded(c)
 
@@ -345,9 +356,10 @@ class ResponseSurfaceMethodology:
                 best_fun = float(res.fun)
                 best_res = res
 
-        self.optimum_coded = tuple(round(float(x), 4) for x in best_res.x)
-        self.optimum_prediksi = best_fun
-        self.optimum_natural = self.coded_to_natural(self.optimum_coded)
+        if best_res is not None and getattr(best_res, "x", None) is not None:
+            self.optimum_coded = tuple(round(float(x), 4) for x in best_res.x)
+            self.optimum_prediksi = best_fun
+            self.optimum_natural = self.coded_to_natural(self.optimum_coded)
 
     def cetak_laporan_lengkap(self, bks=None):
         """Menampilkan laporan lengkap Response Surface, koefisien model, ANOVA, dan parameter optimum."""
@@ -417,15 +429,18 @@ class ResponseSurfaceMethodology:
         print("\n  " + "=" * 81)
         print("  PARAMETER OPTIMUM KONTINU HASIL MINIMALISASI RESPONSE SURFACE (L-BFGS-B):")
         print("  " + "=" * 81)
-        print(f"    * Titik Terkode (Coded x*)        : x1={self.optimum_coded[0]:+.4f}, x2={self.optimum_coded[1]:+.4f}, x3={self.optimum_coded[2]:+.4f}")
-        for k, v in self.optimum_natural.items():
-            fmt = f"{v:.4f}" if v < 10 else f"{v:.1f}"
-            print(f"    * {k:<30} : {fmt}")
-        print(f"    * Prediksi Nilai Objektif Optimum: {self.optimum_prediksi:.1f}")
+        if self.optimum_coded is not None:
+            print(f"    * Titik Terkode (Coded x*)        : x1={self.optimum_coded[0]:+.4f}, x2={self.optimum_coded[1]:+.4f}, x3={self.optimum_coded[2]:+.4f}")
+        if self.optimum_natural is not None:
+            for k, v in self.optimum_natural.items():
+                fmt = f"{v:.4f}" if v < 10 else f"{v:.1f}"
+                print(f"    * {k:<30} : {fmt}")
+        if self.optimum_prediksi is not None:
+            print(f"    * Prediksi Nilai Objektif Optimum: {self.optimum_prediksi:.1f}")
 
-        if bks is not None:
-            gap = ((self.optimum_prediksi - bks) / bks) * 100
-            print(f"    * BKS Instance ({self.nama_instance:<15}) : {bks} (Prediksi Gap: +{gap:.2f}%)")
+            if bks is not None:
+                gap = ((self.optimum_prediksi - bks) / bks) * 100
+                print(f"    * BKS Instance ({self.nama_instance:<15}) : {bks} (Prediksi Gap: +{gap:.2f}%)")
 
         print("  " + "=" * 81)
 

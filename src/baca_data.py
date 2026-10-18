@@ -1,6 +1,6 @@
-"""baca_data.py — TAHAP 4 (DIPERBAIKI)
+"""baca_data.py — TAHAP 4
 
-Membaca file instance .vrp (kompatibel penuh dengan Set A dan Set X).
+Membaca file instance .vrp.
 """
 
 import os

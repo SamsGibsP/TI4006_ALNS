@@ -25,31 +25,39 @@ import random
 class DestroyOperator:
     """Kumpulan cara merusak solusi."""
 
+    _matriks_jarak: list[list[float]]
+    _demand_node: list[int]
+    max_d: float
+    kapasitas: float
+
     def __init__(self, instance):
         self.instance = instance
 
-        self._matriks_jarak = getattr(
+        matriks = getattr(
             self.instance, "_matriks_jarak", getattr(self.instance, "matrix_jarak", None)
         )
-        if self._matriks_jarak is None:
+        if matriks is None:
             max_id = max(n.nomor for n in self.instance.daftar_node)
-            self._matriks_jarak = [[0] * (max_id + 1) for _ in range(max_id + 1)]
+            matriks = [[0.0] * (max_id + 1) for _ in range(max_id + 1)]
             for a in self.instance.daftar_node:
                 for b in self.instance.daftar_node:
-                    self._matriks_jarak[a.nomor][b.nomor] = a.jarak_ke(b)
+                    matriks[a.nomor][b.nomor] = float(a.jarak_ke(b))
+        self._matriks_jarak = matriks
 
-        self._demand_node = getattr(self.instance, "_demand_node", None)
-        if self._demand_node is None:
+        demand_node = getattr(self.instance, "_demand_node", None)
+        if demand_node is None:
             max_id = max(n.nomor for n in self.instance.daftar_node)
-            self._demand_node = [0] * (max_id + 1)
+            demand_node = [0] * (max_id + 1)
             for n in self.instance.daftar_node:
-                self._demand_node[n.nomor] = n.demand
+                demand_node[n.nomor] = int(n.demand)
+        self._demand_node = demand_node
 
-        self.max_d = getattr(self.instance, "_max_d", None)
-        if self.max_d is None:
-            self.max_d = max(max(baris) for baris in self._matriks_jarak)
-        if self.max_d <= 0:
-            self.max_d = 1.0
+        max_d_val = getattr(self.instance, "_max_d", None)
+        if max_d_val is None:
+            max_d_val = max(max(baris) for baris in self._matriks_jarak)
+        if max_d_val <= 0:
+            max_d_val = 1.0
+        self.max_d = float(max_d_val)
 
         self.kapasitas = float(getattr(self.instance, "kapasitas", 1.0))
         if self.kapasitas <= 0:

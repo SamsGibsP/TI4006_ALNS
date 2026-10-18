@@ -122,9 +122,9 @@ def main():
     t_total_mulai = time.time()
 
     for inst_info in INSTANCES:
-        nama_inst = inst_info["label"]
-        bks = inst_info["bks"]
-        path_vrp = os.path.join(folder_tahap19, "X", inst_info["nama"])
+        nama_inst = str(inst_info["label"])
+        bks = float(inst_info["bks"])
+        path_vrp = os.path.join(folder_tahap19, "X", str(inst_info["nama"]))
 
         print(f"\n{'#' * 115}")
         print(f" INSTANCE: {nama_inst} (BKS = {bks})")
@@ -304,11 +304,11 @@ def main():
         "jarak_terbaik", "jarak_rata2", "jarak_terburuk", "std_dev",
         "gap_terbaik_persen", "gap_rata2_persen", "delta_vs_full", "waktu_rata2_detik"
     ]
-    path_sum_root = os.path.join(dir_root, "ringkasan_ablasi.csv")
+    
     path_sum_local = os.path.join(folder_tahap19, "ringkasan_ablasi.csv")
     path_sum_final = os.path.join(dir_hasil_final, "ringkasan_ablasi.csv")
 
-    for p in [path_sum_root, path_sum_local, path_sum_final]:
+    for p in [path_sum_local, path_sum_final]:
         with open(p, "w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=summary_headers)
             w.writeheader()
@@ -326,7 +326,7 @@ def main():
             w.writeheader()
             w.writerows(rekap_analisis_rows)
 
-    print(f"\n[OK] File ringkasan berhasil disimpan ke:\n  - {path_sum_root}\n  - {path_sum_final}")
+    print(f"\n[OK] File ringkasan berhasil disimpan ke:\n   - {path_sum_final}")
 
 
 if __name__ == "__main__":

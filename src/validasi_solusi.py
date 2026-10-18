@@ -112,6 +112,8 @@ def validasi_solusi(path_vrp, path_sol, verbose=True):
     coords = inst["coords"]
     demands = inst["demands"]
     cap = inst["capacity"]
+    if cap is None:
+        raise ValueError(f"Kapasitas tidak ditemukan pada file VRP: {path_vrp}")
     depot_id = inst["depot_id"]
     pelanggan_node_ids = inst["pelanggan"]
     depot_coord = coords[depot_id]

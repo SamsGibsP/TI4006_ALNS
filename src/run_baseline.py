@@ -89,9 +89,9 @@ def main():
         print("=" * 90, flush=True)
 
         for inst_info in INSTANCES:
-            nama_inst = inst_info["label"]
-            bks = inst_info["bks"]
-            path_vrp = os.path.join(folder_tahap19, "X", inst_info["nama"])
+            nama_inst = str(inst_info["label"])
+            bks = float(inst_info["bks"])
+            path_vrp = os.path.join(folder_tahap19, "X", str(inst_info["nama"]))
 
             daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
             instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
