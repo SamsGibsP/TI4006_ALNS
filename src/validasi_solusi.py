@@ -224,12 +224,11 @@ def main():
         path_vrp = os.path.join(folder_ini, "X", vrp_name)
         if not os.path.exists(path_vrp):
             path_vrp = os.path.join(os.path.dirname(folder_ini), "X", vrp_name)
-        path_sol = os.path.join(folder_ini, sol_name)
-        if not os.path.exists(path_sol):
-            path_sol = os.path.join(os.path.dirname(folder_ini), sol_name)
+        dir_final = os.path.join(os.path.dirname(folder_ini), "hasil_final")
+        path_sol = os.path.join(dir_final, sol_name)
 
         if not os.path.exists(path_sol):
-            print(f"[SKIP] File {sol_name} belum dibuat.")
+            print(f"[SKIP] File {sol_name} belum dibuat di {dir_final}.")
             continue
 
         try:

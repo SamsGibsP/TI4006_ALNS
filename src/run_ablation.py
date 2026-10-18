@@ -99,8 +99,6 @@ def main():
     print(f" Total Runs: {len(INSTANCES)} Instances x {len(KONFIGURASI_ABLATION)} Konfigurasi x {len(SEEDS)} Seeds = {len(INSTANCES) * len(KONFIGURASI_ABLATION) * len(SEEDS)} Runs")
     print("=" * 115)
 
-    path_raw_root = os.path.join(dir_root, "hasil_mentah_ablasi.csv")
-    path_raw_local = os.path.join(folder_tahap19, "hasil_mentah_ablasi.csv")
     path_raw_final = os.path.join(dir_hasil_final, "hasil_mentah_ablasi.csv")
 
     raw_headers = [
@@ -112,16 +110,9 @@ def main():
 
     semua_raw_rows = []
 
-    f_raw_root = open(path_raw_root, "w", newline="", encoding="utf-8")
-    f_raw_local = open(path_raw_local, "w", newline="", encoding="utf-8")
     f_raw_final = open(path_raw_final, "w", newline="", encoding="utf-8")
-
-    w_root = csv.writer(f_raw_root)
-    w_local = csv.writer(f_raw_local)
     w_final = csv.writer(f_raw_final)
-
-    for w in [w_root, w_local, w_final]:
-        w.writerow(raw_headers)
+    w_final.writerow(raw_headers)
 
     solusi_terbaik_global = {}
 
@@ -179,10 +170,7 @@ def main():
                     params["pakai_shaw"], params["pakai_regret3"], params["pakai_ls"], params["pakai_reheating"]
                 ]
 
-                for w in [w_root, w_local, w_final]:
-                    w.writerow(row)
-                f_raw_root.flush()
-                f_raw_local.flush()
+                w_final.writerow(row)
                 f_raw_final.flush()
 
                 semua_raw_rows.append({
@@ -199,27 +187,21 @@ def main():
 
                 print(f"       Seed {seed}: Jarak = {jarak:>5} | Rute = {rute_aktif:>2} | Waktu = {dur:5.2f}s | {status}", flush=True)
 
-        # Simpan solusi terbaik Full ALNS untuk instance ini
+        # Simpan solusi terbaik Full ALNS untuk instance ini (hanya di hasil_final)
         if solusi_terbaik_instance is not None:
             solusi_terbaik_global[nama_inst] = solusi_terbaik_instance
             nama_file_sol = f"solusi_terbaik_{nama_inst}.sol"
-            p_local = os.path.join(folder_tahap19, nama_file_sol)
             p_final = os.path.join(dir_hasil_final, nama_file_sol)
-            p_root = os.path.join(dir_root, nama_file_sol)
 
-            solusi_terbaik_instance.simpan_cvrplib_sol(p_local)
             solusi_terbaik_instance.simpan_cvrplib_sol(p_final)
-            solusi_terbaik_instance.simpan_cvrplib_sol(p_root)
             print(f"\n  >>> [EKSPOR .SOL] Solusi Full ALNS terbaik untuk {nama_inst}: Jarak = {solusi_terbaik_instance.total_jarak} ({solusi_terbaik_instance.jumlah_rute} rute)")
 
-    f_raw_root.close()
-    f_raw_local.close()
     f_raw_final.close()
 
     durasi_total = time.time() - t_total_mulai
     print(f"\n{'=' * 115}")
     print(f" SELURUH EKSPERIMEN ABLASI SELESAI DALAM {durasi_total:.2f} DETIK ({durasi_total/60:.2f} MENIT)")
-    print(f" Berkas mentah disimpan di: {path_raw_root}")
+    print(f" Berkas mentah disimpan di: {path_raw_final}")
     print(f"{'=' * 115}")
 
     # =========================================================================
@@ -311,26 +293,19 @@ def main():
         "gap_terbaik_persen", "gap_rata2_persen", "delta_vs_full", "waktu_rata2_detik"
     ]
     
-    path_sum_local = os.path.join(folder_tahap19, "ringkasan_ablasi.csv")
     path_sum_final = os.path.join(dir_hasil_final, "ringkasan_ablasi.csv")
+    with open(path_sum_final, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=summary_headers)
+        w.writeheader()
+        w.writerows(ringkasan_rows)
 
-    for p in [path_sum_local, path_sum_final]:
-        with open(p, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=summary_headers)
-            w.writeheader()
-            w.writerows(ringkasan_rows)
-
-    # Simpan juga rekap_analisis_ablasi.csv untuk kompatibilitas
-    path_analisis_root = os.path.join(dir_root, "rekap_analisis_ablasi.csv")
-    path_analisis_local = os.path.join(folder_tahap19, "rekap_analisis_ablasi.csv")
+    # Simpan juga rekap_analisis_ablasi.csv di hasil_final
     path_analisis_final = os.path.join(dir_hasil_final, "rekap_analisis_ablasi.csv")
-
     analisis_headers = ["instance", "konfigurasi", "terbaik", "rata_rata", "terburuk", "std_dev", "gap_best", "gap_rata2", "delta_vs_full", "waktu_rata2"]
-    for p in [path_analisis_root, path_analisis_local, path_analisis_final]:
-        with open(p, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=analisis_headers)
-            w.writeheader()
-            w.writerows(rekap_analisis_rows)
+    with open(path_analisis_final, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=analisis_headers)
+        w.writeheader()
+        w.writerows(rekap_analisis_rows)
 
     print(f"\n[OK] File ringkasan berhasil disimpan ke:\n   - {path_sum_final}")
 

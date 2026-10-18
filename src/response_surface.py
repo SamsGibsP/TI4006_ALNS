@@ -494,7 +494,10 @@ if __name__ == "__main__":
     optimum = rsm.jalankan(verbose=True)
     rsm.cetak_laporan_lengkap(bks=15700)
 
-    # 4. Simpan ke CSV
-    path_csv_out = os.path.join(folder_ini, "hasil_rsm_instance.csv")
+    # 4. Simpan ke CSV di hasil_final
+    dir_root = os.path.dirname(folder_ini)
+    dir_hasil_final = os.path.join(dir_root, "hasil_final")
+    os.makedirs(dir_hasil_final, exist_ok=True)
+    path_csv_out = os.path.join(dir_hasil_final, "hasil_rsm_instance.csv")
     rsm.simpan_csv(path_csv_out)
     print(f"\n[SUKSES] Berkas hasil RSM tersimpan di: {path_csv_out}")

@@ -112,11 +112,12 @@ def main():
     for p in kisi_parameter:
         tuner.pengaruh_satu_parameter(p)
 
-    # 7. Ekspor Hasil ke CSV
-    csv_local = os.path.join(folder_tahap19, "hasil_grid_search.csv")
-    csv_root = os.path.join(dir_root, "hasil_grid_search.csv")
-    tuner.simpan_csv(csv_local)
-    tuner.simpan_csv(csv_root)
+    # 7. Ekspor Hasil ke CSV (hanya di hasil_final)
+    dir_hasil_final = os.path.join(dir_root, "hasil_final")
+    os.makedirs(dir_hasil_final, exist_ok=True)
+    csv_final = os.path.join(dir_hasil_final, "hasil_grid_search.csv")
+    tuner.simpan_csv(csv_final)
+    print(f"\n[SUKSES] Berkas hasil tuning tersimpan di: {csv_final}")
 
     print("\n" + "=" * 78)
     print(f" GRID SEARCH SELESAI DALAM {waktu_total:.1f} DETIK")

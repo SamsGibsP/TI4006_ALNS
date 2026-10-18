@@ -6,6 +6,9 @@ import random
 import sys
 
 folder_tahap19 = os.path.dirname(os.path.abspath(__file__))
+dir_root = os.path.dirname(folder_tahap19)
+dir_hasil_final = os.path.join(dir_root, "hasil_final")
+os.makedirs(dir_hasil_final, exist_ok=True)
 
 if folder_tahap19 not in sys.path:
     sys.path.insert(0, folder_tahap19)
@@ -49,7 +52,7 @@ stats.strip_dirs()
 stats.sort_stats("tottime")
 stats.print_stats(30)
 
-target_output = os.path.join(folder_tahap19, "profile_n351.txt")
+target_output = os.path.join(dir_hasil_final, "profile_n351.txt")
 with open(target_output, "w", encoding="utf-8") as f:
     f.write(output_buffer.getvalue())
 

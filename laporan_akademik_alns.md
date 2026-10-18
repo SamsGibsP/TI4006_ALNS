@@ -349,32 +349,32 @@ python src/validasi_solusi.py
 ```powershell
 python src/run_ablation.py
 ```
-*Output: Memperbarui `hasil_mentah_ablasi.csv` (180 baris, 10 seed [1..10]) dan `ringkasan_ablasi.csv`.*
+*Output: Memperbarui berkas di `hasil_final/hasil_mentah_ablasi.csv` (180 baris, 10 seed [1..10]) dan `hasil_final/ringkasan_ablasi.csv`.*
 
 ### 4. Menjalankan Ulang Evaluasi Baseline vs Full (60 Run):
 ```powershell
 python src/run_baseline.py
 ```
-*Output: Memperbarui `hasil_mentah_baseline.csv` (60 baris, 10 seed [1..10]) dan `rekap_komparasi_vs_full.csv`.*
+*Output: Memperbarui berkas di `hasil_final/hasil_mentah_baseline.csv` (60 baris, 10 seed [1..10]) dan `hasil_final/rekap_komparasi_vs_full.csv`.*
 
 ### 5. Membangun Tabel Laporan Otomatis (dengan Uji Mann-Whitney U & Bootstrap CI):
 ```powershell
 python src/buat_tabel_laporan.py
 ```
-*Output: Memperbarui tabel Bab 8 dan Bab 9 laporan langsung dari CSV.*
+*Output: Memperbarui tabel Bab 8 dan Bab 9 laporan langsung dari CSV di folder `hasil_final/`.*
 
 ### 6. Membuat Ulang Grafik Visualisasi (300 DPI):
 ```powershell
 python src/visualisasi.py
 ```
-*Output: Menghasilkan 4 file grafik PNG publikasi ilmiah.*
+*Output: Menghasilkan 5 berkas grafik PNG publikasi ilmiah di folder `hasil_final/`.*
 
 ---
 
 ## 14. KESIMPULAN ILMIAH
 
 1. **Kepatuhan Mutlak & Transparansi Armada:** Repositori telah dibersihkan secara tuntas dari ketergantungan pada solver optimasi eksternal. Solver ALNS berjalan 100% menggunakan pustaka standar Python dengan inisialisasi Clarke-Wright murni. Batas armada tidak lagi dipaksakan secara artifisial, menjamin ketercapaian solusi global terbaik yang sah.
-2. **Koreksi Cacat Kritis Berhasil:** Validator solusi eksak (`layak()`), invarian riwayat iterasi ALNS, offset penalti formal Regret-3, dan batas iterasi Local Search ($\\text{MAKS\\_ITERASI\\_LS} = 30$) telah diperbaiki dan dibuktikan melalui 19 unit test otomatis.
+2. **Koreksi Cacat Kritis Berhasil:** Validator solusi eksak (`layak()`), invarian riwayat iterasi ALNS, offset penalti formal Regret-3, dan batas iterasi Local Search ($\text{MAKS\_ITERASI\_LS} = 30$) telah diperbaiki dan dibuktikan melalui 19 unit test otomatis.
 3. **Kualitas Solusi yang Kompetitif (10 Seed, 2.000 Iterasi):**
    - `X-n101-k25`: Jarak terbaik **27.812** (Gap **+0.80%** dari BKS 27.591, 28 rute; rata-rata **28.058,00** / **+1.69%**).
    - `X-n143-k7`: Jarak terbaik **15.825** (Gap **+0.80%** dari BKS 15.700, 7 rute; rata-rata **16.102,70** / **+2.56%**).
@@ -382,5 +382,5 @@ python src/visualisasi.py
 4. **Validasi Empiris & Inferensi Statistik Modifikasi:** 
    - Mekanisme *Reheating* terbukti secara statistik signifikan ($p < 0,05$) dalam mencegah konvergensi dini pada `X-n101-k25` ($p = 0,0376$) dan `X-n351-k40` ($p = 0,0373$).
    - Konfigurasi Full ALNS secara signifikan mengungguli Baseline pada `X-n101-k25` ($p = 0,0113$), serta mereduksi standar deviasi sebesar $74,7\%$ pada `X-n351-k40` ($58,81$ vs $232,08$).
-   - Operator lain yang menunjukkan $p \\ge 0,05$ dilaporkan secara jujur dan transparan sebagai bagian dari dinamika adaptif ALNS.
-5. **Kesiapan Penyerahan:** Seluruh artefak submission (`.sol`, raw CSV 10 seed, summary CSV, suite pengujian, generator tabel otomatis, grafik 300 DPI, dan laporan akademik) telah disinkronkan 100% tanpa kontradiksi.
+   - Operator lain yang menunjukkan $p \ge 0,05$ dilaporkan secara jujur dan transparan sebagai bagian dari dinamika adaptif ALNS.
+5. **Kesiapan Penyerahan:** Seluruh artefak submission (`.sol`, raw CSV 10 seed, summary CSV, suite pengujian, generator tabel otomatis, dan grafik 300 DPI) tersentralisasi secara tunggal di dalam direktori `hasil_final/` tanpa duplikasi berkas.

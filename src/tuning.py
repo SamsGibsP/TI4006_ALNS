@@ -195,6 +195,8 @@ if __name__ == "__main__":
     for p in kisi:
         tuner.pengaruh_satu_parameter(p)
 
-    csv_out = os.path.join(folder, "hasil_grid_search.csv")
+    dir_hasil_final = os.path.join(os.path.dirname(folder), "hasil_final")
+    os.makedirs(dir_hasil_final, exist_ok=True)
+    csv_out = os.path.join(dir_hasil_final, "hasil_grid_search.csv")
     tuner.simpan_csv(csv_out)
 

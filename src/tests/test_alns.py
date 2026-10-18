@@ -144,9 +144,10 @@ class TestFeasibilityValidator(unittest.TestCase):
             ("X-n143-k7.vrp", "solusi_terbaik_X-n143-k7.sol"),
             ("X-n351-k40.vrp", "solusi_terbaik_X-n351-k40.sol"),
         ]
+        dir_final = os.path.join(os.path.dirname(folder_tahap19), "hasil_final")
         for vrp_name, sol_name in sol_files:
             p_vrp = os.path.join(folder_tahap19, "X", vrp_name)
-            p_sol = os.path.join(folder_tahap19, sol_name)
+            p_sol = os.path.join(dir_final, sol_name)
             if os.path.exists(p_sol):
                 hasil = validasi_solusi(p_vrp, p_sol, verbose=False)
                 self.assertTrue(hasil["valid"], f"File {sol_name} gagal validasi")
