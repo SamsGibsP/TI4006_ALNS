@@ -1,0 +1,19 @@
+instance,konfigurasi,keterangan,bks,n_run,n_layak,persen_layak,jarak_terbaik,jarak_rata2,jarak_terburuk,std_dev,gap_terbaik_persen,gap_rata2_persen,delta_vs_full,waktu_rata2_detik
+X-n101-k25,Full,Semua 4 Modifikasi Aktif,27591.0,10,10,100.0%,27812,28058.00,28204,116.76,0.80%,1.69%,+0.00,1.30
+X-n101-k25,Without_Shaw,Tanpa Shaw Removal (Random & Worst),27591.0,10,10,100.0%,27610,28098.20,28318,193.89,0.07%,1.84%,+40.20,1.09
+X-n101-k25,Without_Regret3,Tanpa Regret-3 (Greedy & Regret-2),27591.0,10,10,100.0%,27610,28080.00,28259,178.83,0.07%,1.77%,+22.00,1.38
+X-n101-k25,Without_LocalSearch,"Tanpa Local Search (2-Opt, Relocate, Swap)",27591.0,10,10,100.0%,27655,28057.30,28350,219.19,0.23%,1.69%,-0.70,1.59
+X-n101-k25,Without_Reheating,Tanpa Reheating Suhu SA,27591.0,10,10,100.0%,28042,28237.10,28475,174.11,1.63%,2.34%,+179.10,1.53
+X-n101-k25,Ablation_Baseline,Baseline Ablasi (Seluruh 4 Modifikasi Nonaktif),27591.0,10,10,100.0%,27866,28397.90,28735,285.74,1.00%,2.92%,+339.90,1.20
+X-n143-k7,Full,Semua 4 Modifikasi Aktif,15700.0,10,10,100.0%,15825,16102.70,16525,241.52,0.80%,2.56%,+0.00,5.37
+X-n143-k7,Without_Shaw,Tanpa Shaw Removal (Random & Worst),15700.0,10,10,100.0%,15934,16115.90,16435,193.81,1.49%,2.65%,+13.20,4.99
+X-n143-k7,Without_Regret3,Tanpa Regret-3 (Greedy & Regret-2),15700.0,10,10,100.0%,15917,16046.00,16241,108.24,1.38%,2.20%,-56.70,5.60
+X-n143-k7,Without_LocalSearch,"Tanpa Local Search (2-Opt, Relocate, Swap)",15700.0,10,10,100.0%,15998,16217.90,16460,168.93,1.90%,3.30%,+115.20,5.46
+X-n143-k7,Without_Reheating,Tanpa Reheating Suhu SA,15700.0,10,10,100.0%,15902,16190.90,16548,214.39,1.29%,3.13%,+88.20,5.74
+X-n143-k7,Ablation_Baseline,Baseline Ablasi (Seluruh 4 Modifikasi Nonaktif),15700.0,10,10,100.0%,15854,16205.50,16539,235.89,0.98%,3.22%,+102.80,4.44
+X-n351-k40,Full,Semua 4 Modifikasi Aktif,25896.0,10,10,100.0%,26768,26863.60,26944,58.81,3.37%,3.74%,+0.00,11.25
+X-n351-k40,Without_Shaw,Tanpa Shaw Removal (Random & Worst),25896.0,10,10,100.0%,26548,26787.00,26911,121.31,2.52%,3.44%,-76.60,8.45
+X-n351-k40,Without_Regret3,Tanpa Regret-3 (Greedy & Regret-2),25896.0,10,10,100.0%,26531,26737.80,26901,131.63,2.45%,3.25%,-125.80,11.03
+X-n351-k40,Without_LocalSearch,"Tanpa Local Search (2-Opt, Relocate, Swap)",25896.0,10,10,100.0%,26473,26764.80,26982,157.47,2.23%,3.35%,-98.80,12.00
+X-n351-k40,Without_Reheating,Tanpa Reheating Suhu SA,25896.0,10,10,100.0%,26825,26957.60,27123,111.29,3.59%,4.10%,+94.00,11.12
+X-n351-k40,Ablation_Baseline,Baseline Ablasi (Seluruh 4 Modifikasi Nonaktif),25896.0,10,10,100.0%,26570,26892.90,27123,232.08,2.60%,3.85%,+29.30,9.99

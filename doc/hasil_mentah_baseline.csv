@@ -1,0 +1,12 @@
+instance,seed,konfigurasi,jarak,waktu_detik,status,jumlah_rute
+X-n101-k25,1,Baseline,28208,1.01,LAYAK,26
+X-n101-k25,2,Baseline,28249,1.00,LAYAK,26
+X-n101-k25,3,Baseline,28273,1.14,LAYAK,26
+X-n101-k25,4,Baseline,27905,1.07,LAYAK,26
+X-n101-k25,5,Baseline,28373,1.22,LAYAK,26
+X-n143-k7,1,Baseline,16070,7.42,LAYAK,7
+X-n143-k7,2,Baseline,16213,7.38,LAYAK,7
+X-n143-k7,3,Baseline,15913,7.04,LAYAK,7
+X-n143-k7,4,Baseline,16469,6.43,LAYAK,7
+X-n143-k7,5,Baseline,16350,6.32,LAYAK,7
+X-n351-k40,1,Baseline,37731,6.16,LAYAK,40

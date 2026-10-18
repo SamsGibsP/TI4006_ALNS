@@ -1,0 +1,38 @@
+         3957442 function calls (3942240 primitive calls) in 1.540 seconds
+
+   Ordered by: internal time
+   List reduced from 95 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   437075    0.269    0.000    0.644    0.000 route.py:89(sisip_terbaik)
+   126577    0.230    0.000    0.302    0.000 solution.py:136(hemat_bila_dikeluarkan)
+   229790    0.225    0.000    0.320    0.000 route.py:78(biaya_sisip)
+  1287010    0.135    0.000    0.135    0.000 cvrp_instance.py:45(jarak)
+   103069    0.071    0.000    0.102    0.000 destroy.py:133(hitung_r)
+   465875    0.052    0.000    0.052    0.000 route.py:64(masih_muat)
+   519789    0.049    0.000    0.049    0.000 {built-in method builtins.len}
+      163    0.048    0.000    0.296    0.002 repair.py:168(regret3_insertion)
+    19178    0.045    0.000    0.056    0.000 route.py:30(hitung_ulang)
+      170    0.041    0.000    0.267    0.002 repair.py:125(regret2_insertion)
+      167    0.039    0.000    0.260    0.002 repair.py:98(greedy_insertion)
+    12264    0.038    0.000    0.145    0.000 {method 'sort' of 'list' objects}
+   179390    0.038    0.000    0.038    0.000 {method 'index' of 'list' objects}
+      164    0.033    0.000    0.357    0.002 destroy.py:54(worst_removal)
+15351/153    0.022    0.000    0.025    0.000 {built-in method builtins.max}
+    13475    0.021    0.000    0.049    0.000 route.py:70(copy)
+    53900    0.020    0.000    0.026    0.000 visit.py:22(copy)
+     4069    0.017    0.000    0.053    0.000 solution.py:122(keluarkan)
+       10    0.012    0.001    0.031    0.003 local_search.py:147(swap_terbaik)
+       12    0.011    0.001    0.033    0.003 local_search.py:83(relocate_terbaik)
+   103069    0.011    0.000    0.011    0.000 cvrp_instance.py:42(ambil_node)
+     2929    0.010    0.000    0.010    0.000 solution.py:132(nomor_pelanggan)
+   103069    0.010    0.000    0.010    0.000 {built-in method builtins.abs}
+    46758    0.008    0.000    0.008    0.000 {method 'append' of 'list' objects}
+    56424    0.007    0.000    0.007    0.000 visit.py:13(__init__)
+    29816    0.006    0.000    0.009    0.000 route.py:67(kosong)
+        1    0.006    0.006    1.540    1.540 alns.py:173(jalankan)
+       39    0.006    0.000    0.010    0.000 local_search.py:35(two_opt_terbaik)
+      149    0.005    0.000    0.184    0.001 destroy.py:90(shaw_removal)
+     2524    0.004    0.000    0.016    0.000 route.py:19(sisip_di)
+
+

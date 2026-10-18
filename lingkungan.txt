@@ -1,0 +1,31 @@
+================================================================================
+ METADATA REPRODUKSIBILITAS EKSPERIMEN ALNS-CVRP
+===============================================================================
+Tanggal & Waktu Eksekusi : 2026-10-17 18:35:00 WIB
+Sistem Operasi           : Windows 10/11 x64 (PowerShell)
+Versi Python             : 3.13.x (64-bit)
+Corpus / Workspace       : SamsGibsP/TI4006_ALNS (d:\Metaheuristik\TI4006_ALNS)
+Git Commit Head          : afde640989f660fa1f9bf80db363914a4c6a6f6f (Baseline Otentik Tahap 19)
+
+PARAMETER GLOBAL ALNS (RESPONS SURFACE METHODOLOGY OPTIMAL):
+- Suhu Awal (T0)                : 800.0
+- Laju Pendinginan (Cooling)   : 0.990
+- Faktor Reaksi Adaptif (r)    : 0.31
+- Panjang Segmen Adaptif        : 100 iterasi
+- Bobot Skor (sigma1/2/3)      : 33.0 / 9.0 / 13.0
+- Ambang Reheating             : 200 iterasi stagnan
+- Faktor Suhu Reheat           : 0.40 * T0
+- Operator LS                  : Two-opt, Relocate, Swap (Maks 30 iterasi)
+- Heuristik Awal               : Clarke-Wright Savings Murni
+
+DAFTAR INSTANCE DAN BKS RESMI (CVRPLIB SET X):
+1. X-n101-k25 : Kapasitas 206, Demand 100 node, BKS = 27,591 (Nominal k = 25, Rute Layak = 26/27)
+2. X-n143-k7  : Kapasitas 1190, Demand 142 node, BKS = 15,700 (Nominal k = 7, Rute Layak = 7)
+3. X-n351-k40 : Kapasitas 436, Demand 350 node, BKS = 25,896 (Nominal k = 40, Rute Layak = 40/41)
+
+KONVENSI FORMULA EVALUASI:
+- Gap ke BKS (%) = ((Cost - BKS) / BKS) * 100
+- Sampel Deviasi Standar (ddof = 1): sqrt(sum((x - mean)^2) / (N - 1))
+- Evaluasi Final Menggunakan 10 Seed Acak Terkontrol: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+- Independensi Validasi: Parser mandiri validasi_solusi.py (format CVRPLIB Set X)
+================================================================================
