@@ -1,4 +1,4 @@
-﻿import inspect
+import inspect
 import random
 
 
@@ -95,15 +95,7 @@ class RepairOperator:
                 r.tambah_node(node)
                 return True
 
-        # Hard-cap guardrail: jangan pernah mengizinkan rute baru jika kuota armada sudah tercapai
-        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        if batas_k is None:
-            batas_k = getattr(self.instance, "batas_armada", None)
-
-        if batas_k is not None and len(rute_aktif) >= batas_k:
-            return False
-
+        # Buat rute baru jika tidak ada rute yang dapat menampung
         r_baru = solusi.rute_baru()
         r_baru.tambah_node(node)
         return True
@@ -173,10 +165,7 @@ class RepairOperator:
                         c_node.pop(idx, None)
 
         sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
-        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
-        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
+        return bool(sukses_muatan and len(bank) == 0)
 
     def regret2_insertion(self, solusi, bank, pakai_noise=False, tingkat_noise=0.1):
         """Regret-2 insertion dengan incremental caching dan opsi noise."""
@@ -256,10 +245,7 @@ class RepairOperator:
                         c_node.pop(idx, None)
 
         sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
-        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
-        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
+        return bool(sukses_muatan and len(bank) == 0)
 
     def regret3_insertion(self, solusi, bank, pakai_noise=False, tingkat_noise=0.1):
         """Regret-3 insertion (Ropke & Pisinger 2006) dengan incremental caching dan opsi noise."""
@@ -295,7 +281,7 @@ class RepairOperator:
                         regret = 1e9 + c1
                     elif len(pilihan) == 2:
                         c2 = pilihan[1][1][0]
-                        regret = c2 - c1
+                        regret = 1e9 + (c2 - c1)
                     else:
                         c2 = pilihan[1][1][0]
                         c3 = pilihan[2][1][0]
@@ -343,10 +329,7 @@ class RepairOperator:
                         c_node.pop(idx, None)
 
         sukses_muatan = self.perbaiki_kelebihan_muatan(solusi)
-        rute_aktif = [r for r in solusi.daftar_rute if not r.kosong()]
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        kuota_ok = (len(rute_aktif) <= batas_k) if batas_k is not None else True
-        return bool(sukses_muatan and len(bank) == 0 and kuota_ok)
+        return bool(sukses_muatan and len(bank) == 0)
 
 
 def greedy_insertion(solusi, bank, instance=None, **kwargs):

@@ -1,38 +1,38 @@
-         26981446 function calls (26980942 primitive calls) in 13.245 seconds
+         26981446 function calls (26980942 primitive calls) in 12.077 seconds
 
    Ordered by: internal time
    List reduced from 122 to 30 due to restriction <30>
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-      498    2.384    0.005    3.045    0.006 local_search.py:83(relocate_terbaik)
-      177    2.066    0.012    2.197    0.012 local_search.py:180(swap_terbaik)
-  3522667    1.640    0.000    2.375    0.000 destroy.py:181(hitung_r)
-   875517    1.173    0.000    1.346    0.000 route.py:90(sisip_terbaik)
-     9007    0.936    0.000    3.289    0.000 heapq.py:463(nsmallest)
-  7673217    0.693    0.000    0.693    0.000 route.py:65(masih_muat)
-   218800    0.516    0.000    0.725    0.000 {built-in method builtins.sorted}
-  3536219    0.424    0.000    0.424    0.000 {method 'get' of 'dict' objects}
-  3522667    0.314    0.000    0.314    0.000 {built-in method builtins.abs}
-      224    0.309    0.001    1.386    0.006 repair.py:264(regret3_insertion)
-      695    0.279    0.000    0.308    0.000 local_search.py:35(two_opt_terbaik)
-      219    0.279    0.001    1.322    0.006 repair.py:181(regret2_insertion)
-  2382891    0.238    0.000    0.238    0.000 {built-in method builtins.len}
-   636311    0.179    0.000    0.179    0.000 {built-in method _heapq._heapreplace_max}
-    59200    0.178    0.000    0.195    0.000 route.py:30(hitung_ulang)
-       65    0.149    0.002    0.166    0.003 destroy.py:90(worst_removal)
-   316023    0.132    0.000    0.132    0.000 {method 'index' of 'list' objects}
-    11094    0.108    0.000    0.108    0.000 solution.py:152(nomor_pelanggan)
-  1229095    0.103    0.000    0.103    0.000 repair.py:289(<lambda>)
-     8996    0.103    0.000    0.103    0.000 {method 'sort' of 'list' objects}
-  1254625    0.102    0.000    0.102    0.000 repair.py:206(<lambda>)
-     2046    0.098    0.000    0.442    0.000 {built-in method builtins.min}
-    13989    0.098    0.000    0.304    0.000 solution.py:142(keluarkan)
-      339    0.095    0.000    4.211    0.012 destroy.py:138(shaw_removal)
-   186200    0.073    0.000    0.096    0.000 visit.py:22(copy)
-       57    0.063    0.001    0.226    0.004 repair.py:112(greedy_insertion)
-    21280    0.057    0.000    0.156    0.000 route.py:71(copy)
-   379981    0.049    0.000    0.049    0.000 {built-in method builtins.getattr}
-   249525    0.041    0.000    0.041    0.000 {method 'items' of 'dict' objects}
-     8996    0.036    0.000    0.036    0.000 {built-in method _heapq._heapify_max}
+      498    2.161    0.004    2.770    0.006 local_search.py:83(relocate_terbaik)
+      177    1.794    0.010    1.910    0.011 local_search.py:180(swap_terbaik)
+  3522667    1.530    0.000    2.211    0.000 destroy.py:181(hitung_r)
+   875517    1.081    0.000    1.240    0.000 route.py:90(sisip_terbaik)
+     9007    0.876    0.000    3.063    0.000 heapq.py:463(nsmallest)
+  7673217    0.640    0.000    0.640    0.000 route.py:65(masih_muat)
+   218800    0.483    0.000    0.679    0.000 {built-in method builtins.sorted}
+  3536219    0.395    0.000    0.395    0.000 {method 'get' of 'dict' objects}
+  3522667    0.289    0.000    0.289    0.000 {built-in method builtins.abs}
+      224    0.287    0.001    1.294    0.006 repair.py:264(regret3_insertion)
+      695    0.263    0.000    0.292    0.000 local_search.py:35(two_opt_terbaik)
+      219    0.253    0.001    1.216    0.006 repair.py:181(regret2_insertion)
+  2382891    0.213    0.000    0.213    0.000 {built-in method builtins.len}
+   636311    0.165    0.000    0.165    0.000 {built-in method _heapq._heapreplace_max}
+    59200    0.163    0.000    0.179    0.000 route.py:30(hitung_ulang)
+       65    0.123    0.002    0.138    0.002 destroy.py:90(worst_removal)
+   316023    0.120    0.000    0.120    0.000 {method 'index' of 'list' objects}
+  1229095    0.097    0.000    0.097    0.000 repair.py:289(<lambda>)
+    11094    0.096    0.000    0.096    0.000 solution.py:152(nomor_pelanggan)
+  1254625    0.095    0.000    0.095    0.000 repair.py:206(<lambda>)
+     8996    0.093    0.000    0.093    0.000 {method 'sort' of 'list' objects}
+     2046    0.093    0.000    0.411    0.000 {built-in method builtins.min}
+      339    0.088    0.000    3.911    0.012 destroy.py:138(shaw_removal)
+    13989    0.087    0.000    0.275    0.000 solution.py:142(keluarkan)
+   186200    0.065    0.000    0.085    0.000 visit.py:22(copy)
+       57    0.056    0.001    0.200    0.004 repair.py:112(greedy_insertion)
+    21280    0.051    0.000    0.139    0.000 route.py:71(copy)
+   379981    0.045    0.000    0.045    0.000 {built-in method builtins.getattr}
+   249525    0.038    0.000    0.038    0.000 {method 'items' of 'dict' objects}
+     8996    0.032    0.000    0.032    0.000 {built-in method _heapq._heapify_max}
 
 

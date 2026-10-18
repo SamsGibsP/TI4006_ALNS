@@ -26,6 +26,6 @@ DAFTAR INSTANCE DAN BKS RESMI (CVRPLIB SET X):
 KONVENSI FORMULA EVALUASI:
 - Gap ke BKS (%) = ((Cost - BKS) / BKS) * 100
 - Sampel Deviasi Standar (ddof = 1): sqrt(sum((x - mean)^2) / (N - 1))
-- Evaluasi Final Menggunakan 5 Seed Acak Terkontrol: [1, 2, 3, 4, 5]
+- Evaluasi Final Menggunakan 10 Seed Acak Terkontrol: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 - Independensi Validasi: Parser mandiri validasi_solusi.py (format CVRPLIB Set X)
 ================================================================================

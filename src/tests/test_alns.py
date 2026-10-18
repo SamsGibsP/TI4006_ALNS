@@ -110,17 +110,17 @@ class TestFeasibilityValidator(unittest.TestCase):
         self.assertFalse(sol.layak())
         self.assertTrue(any("kelebihan muatan" in p for p in sol.daftar_pelanggaran()))
 
-    def test_pelanggaran_batas_armada_ditolak_bila_aktif(self):
-        inst_fleet = buat_instance_dummy(n_pelanggan=3, kapasitas=50, batas_armada=1)
+    def test_armada_bebas_tanpa_batas_keras(self):
+        inst_fleet = buat_instance_dummy(n_pelanggan=3, kapasitas=50)
         sol = Solution(inst_fleet)
         r1 = sol.rute_baru()
         r1.tambah_node(inst_fleet.ambil_node(2))
         r2 = sol.rute_baru()
         r2.tambah_node(inst_fleet.ambil_node(3))
         r2.tambah_node(inst_fleet.ambil_node(4))
-        # Membuka 2 rute padahal batas_armada = 1
-        self.assertFalse(sol.layak())
-        self.assertTrue(any("batas armada" in p for p in sol.daftar_pelanggaran()))
+        # Membuka rute sesuai kebutuhan muatan tanpa dibatasi kuota keras
+        self.assertTrue(sol.layak())
+        self.assertEqual(len(sol.daftar_pelanggaran()), 0)
 
     def test_rute_kosong_ditangani_konsisten(self):
         sol = Solution(self.instance)
@@ -346,9 +346,9 @@ class TestEndToEndIntegration(unittest.TestCase):
             inst = CVRPInstance(d, c, k)
             sol_awal = ConstructionHeuristic(inst).clarke_wright_savings()
 
-            # Verifikasi bahwa solusi awal sepenuhnya layak dan memenuhi batasan armada
+            # Verifikasi bahwa solusi awal sepenuhnya layak dan nilai target CW eksak
             self.assertTrue(sol_awal.layak())
-            self.assertLessEqual(sol_awal.jumlah_rute, inst.jumlah_kendaraan)
+            self.assertEqual(sol_awal.total_jarak, target_cw)
             self.assertEqual(len(sol_awal.daftar_pelanggaran()), 0)
 
             # Smoke test ALNS (5 iterasi)

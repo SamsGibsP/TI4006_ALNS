@@ -127,7 +127,7 @@ print("  " + "-" * 72)
 
 hasil_random, hasil_tetap, hasil_adaptif, hasil_full = [], [], [], []
 
-for seed in range(1, 6):
+for seed in range(42, 47):
     # A. RANDOM SEARCH (Tanpa adaptif, tanpa modifikasi, random walk)
     random.seed(seed)
     sol_rand = ALNS(

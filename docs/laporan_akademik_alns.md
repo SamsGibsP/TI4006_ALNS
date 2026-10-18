@@ -44,7 +44,7 @@ Tiga cacat kritis pada kode awal telah diaudit dan diperbaiki secara tuntas:
 2. **Invarian Bookkeeping Iterasi ALNS:** Menghilangkan pernyataan `continue` pada jalur kegagalan operator perbaikan (*failed repair*), sehingga proses pendinginan suhu (*cooling*), pembaruan segmen adaptif, dan pencatatan riwayat konvergensi ($N$ elemen) terjamin tereksekusi secara konsisten tanpa mendistorsi jadwal pendinginan.
 3. **Semantik Status Operator Repair & Kontrak TypeError:** Memeriksa nilai boolean pengembalian fungsi `perbaiki_kelebihan_muatan(solusi)` serta menggunakan inspeksi tanda tangan fungsi (`inspect.signature`) guna mencegah tertelannya galat pemrograman internal akibat penangkapan `TypeError` yang terlalu luas.
 
-Eksperimen skala penuh dijalankan dengan **5 seed acak terkontrol** (`[1, 2, 3, 4, 5]`) pada seluruh 7 konfigurasi studi ablasi dan 3 instance riil (total 105 run pengujian deterministik). Hasil pengujian divalidasi silang secara independen terhadap format file solusi CVRPLIB `.sol`, menghasilkan tingkat kelayakan 100% dan pencapaian solusi berkualitas tinggi yang sangat kompetitif terhadap *Best Known Solution* (BKS).
+Eksperimen skala penuh dijalankan dengan **10 seed acak terkontrol** (`[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]`) pada seluruh 6 konfigurasi studi ablasi dan 3 instance riil (total 180 run pengujian deterministik pada 2000 iterasi). Hasil pengujian divalidasi silang secara independen terhadap format file solusi CVRPLIB `.sol`, menghasilkan tingkat kelayakan 100% dan pencapaian solusi berkualitas tinggi yang sangat kompetitif terhadap *Best Known Solution* (BKS).
 
 ---
 
@@ -237,7 +237,7 @@ Melalui perancangan eksperimen *Box-Behnken Design* dan regresi polinomial orde 
 
 ## 8. HASIL EKSPERIMEN KOMPARASI BASELINE VS FULL ALNS
 
-Tabel di bawah menyajikan hasil komparasi empiris antara `Ablation_Baseline`, `Original_Tahap19_Baseline`, dan `Full` ALNS (2000 iterasi, 5 seed acak):
+Tabel di bawah menyajikan hasil komparasi empiris antara `Baseline` (algoritma dasar ALNS tanpa 4 modifikasi) dan `Full ALNS` dengan seluruh 4 modifikasi aktif (2000 iterasi, 10 seed acak [1..10], divalidasi 100% layak kapasitas):
 
 | Konfigurasi | Instance | BKS | Terbaik | Rata-rata | Terburuk | Std Dev | Gap Best | Gap Avg | Waktu (s) | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -261,7 +261,7 @@ Tabel di bawah menyajikan hasil komparasi empiris antara `Ablation_Baseline`, `O
 
 ## 9. STUDI ABLASI KOMPREHENSIF (LEAVE-ONE-OUT)
 
-Studi ablasi mengevaluasi kontribusi individual dari masing-masing 4 modifikasi dengan menonaktifkannya satu per satu (*leave-one-out*) pada anggaran 1500 iterasi:
+Studi ablasi mengevaluasi kontribusi individual dari masing-masing 4 modifikasi dengan menonaktifkannya satu per satu (*leave-one-out*) pada anggaran 2000 iterasi dan 10 seed acak ([1..10]):
 
 | Instance | Konfigurasi | BKS | Terbaik | Rata-rata | Terburuk | Std Dev | Gap Best | Gap Avg | $\Delta$ vs Full | Waktu |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -317,13 +317,13 @@ Berdasarkan *cProfile* (`profile_n351.txt`), jalur komputasi terberat (*hot spot
 
 ## 11. PEMBAHASAN KASUS KHUSUS INSTANCE X-N101-K25
 
-Nama file instance `X-n101-k25.vrp` menyertakan label `k25`. Namun, audit teoritis terhadap data instance menunjukkan:
-- Total permintaan seluruh 100 pelanggan: $\sum q_i = 4.095$.
+Nama file instance `X-n101-k25.vrp` menyertakan label `k25`. Analisis terhadap data instance dan standar CVRPLIB Set X menunjukkan:
+- Total permintaan seluruh 100 pelanggan: $\sum q_i = 5.147$.
 - Kapasitas kendaraan: $Q = 206$.
-- Batas bawah analitis jumlah kendaraan:
-  $$K_{\min} = \left\lceil \frac{4095}{206} \right\rceil = 20 \text{ kendaraan}$$
-- Dalam literatur CVRPLIB Set X (Uchoa et al., 2017), angka `k25` adalah solusi armada terbaik yang pernah ditemukan oleh algoritma *exact branch-cut-and-price* setelah puluhan jam komputasi. Heuristik *bin-packing* polinomial standar membuktikan bahwa 25 rute merupakan batas yang sangat ketat (*tight packing*).
-- Solusi Full ALNS yang dihasilkan menggunakan **26 dan 27 rute**, dengan muatan puncak tepat mencapai kapasitas $206/206$ ($100\%$ utilisasi) dan seluruh 100 pelanggan terlayani tanpa pelanggaran. Sesuai panduan tugas, **K bukan batas atas kaku**, sehingga solusi dengan 26 atau 27 rute adalah **100% sah dan layak**.
+- Batas bawah analitis kontinu jumlah kendaraan:
+  $$K_{\min} = \left\lceil \frac{5147}{206} \right\rceil = 25 \text{ kendaraan}$$
+- Angka `k25` pada nama file merupakan batas bawah teoritis kontinu ($K_{\min} = 25$). Namun, berkas solusi resmi CVRPLIB untuk *Best Known Solution* (BKS = 27.591) menggunakan **26 rute**.
+- Hal ini membuktikan secara definitif bahwa memberlakukan $K=25$ sebagai batas atas keras (*hard upper bound*) adalah keliru, karena bahkan solusi BKS itu sendiri tidak dapat dicapai di bawah batas $K \le 25$. Oleh karena itu, solver ALNS tidak membatasi jumlah armada secara artifisial, dan kelayakan solusi dievaluasi secara murni berdasarkan kepatuhan kapasitas muatan ($q(r) \le Q$) serta keterlayanan tepat satu kali untuk setiap pelanggan ($V(r_a) \cap V(r_b) = \emptyset, \bigcup V(r) = V_c$), yang divalidasi penuh oleh `validasi_solusi.py`.
 
 ---
 

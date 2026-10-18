@@ -23,7 +23,7 @@ if not os.path.exists(path):
 
 daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path)
 instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
-solusi_awal = ConstructionHeuristic(instance).nearest_neighbor()
+solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
 
 pencari = ALNS(
     instance,

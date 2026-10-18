@@ -53,40 +53,9 @@ class CVRPInstance:
         if self._max_d <= 0:
             self._max_d = 1.0
 
-        # Batas armada minimal fisik dihitung secara generik berbasis 1D Bin Packing Problem (BPP)
-        if batas_armada is not None:
-            self.jumlah_kendaraan = batas_armada
-        else:
-            self.jumlah_kendaraan = self._hitung_armada_minimal_fisik()
-
-        self.batas_armada = self.jumlah_kendaraan
-
-    def _hitung_armada_minimal_fisik(self):
-        """
-        Menghitung batas bawah armada fisik secara matematis & generik:
-        1. Batas bawah kontinu L0 = ceil(sum(demand) / kapasitas)
-        2. Batas bawah diskret 1D Bin Packing Problem (BPP) menggunakan First-Fit Decreasing (FFD)
-        3. Menetapkan jumlah armada minimal fisik = max(k_file, L0, k_bpp)
-        """
-        demands = sorted([p.demand for p in self.pelanggan], reverse=True)
-        total_demand = sum(demands)
-        l0 = math.ceil(total_demand / self.kapasitas) if self.kapasitas > 0 else 1
-
-        # Simulasi 1D Bin Packing Problem (First-Fit Decreasing)
-        bins = []
-        for d in demands:
-            placed = False
-            for i in range(len(bins)):
-                if bins[i] + d <= self.kapasitas:
-                    bins[i] += d
-                    placed = True
-                    break
-            if not placed:
-                bins.append(d)
-        k_bpp = len(bins)
-
-        k_nominal = self.k_file if self.k_file is not None else 1
-        return max(k_nominal, l0, k_bpp)
+        # Informasi armada nominal instance (tidak dipaksakan sebagai batas keras)
+        self.jumlah_kendaraan = jumlah_kendaraan
+        self.batas_armada = None
 
     def ambil_node(self, nomor):
         return self.node_dict[nomor]

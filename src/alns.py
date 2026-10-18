@@ -16,10 +16,10 @@ def hitung_parameter_adaptif(instance, maks_iterasi, jarak_awal):
     K = max(1, instance.jumlah_kendaraan)
     avg_len = n / K
 
-    # Sesuai rekomendasi Ropke & Pisinger (2006): rho berkisar 8% s.d. 28% dari total pelanggan
+    # rho berkisar 8% s.d. 28% dari total pelanggan
     rho_min = max(8, round(0.08 * n))
     rho_maks = min(
-        round(0.4 * n),
+        round(0.28 * n),
         max(rho_min + 8, round(3.5 * avg_len)),
         60,
     )
@@ -119,7 +119,7 @@ class ALNS:
         self.perusak = DestroyOperator(instance)
         self.pembaik = RepairOperator(instance)
         self.local_search = LocalSearch(
-            instance, operators=["two_opt", "relocate", "swap"], max_iterations=100
+            instance, operators=["two_opt", "relocate", "swap"], max_iterations=30
         )
 
         # Tentukan daftar operator aktif berdasarkan sakelar ablasi

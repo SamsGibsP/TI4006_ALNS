@@ -71,20 +71,13 @@ class Solution:
         masalah = []
         rute_aktif = [r for r in self.daftar_rute if len(r.daftar_visit) > 0]
 
-        # 1. Batas armada diperiksa secara ketat
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        if batas_k is None:
-            batas_k = getattr(self.instance, "batas_armada", None)
-        if batas_k is not None and len(rute_aktif) > batas_k:
-            masalah.append(f"Jumlah rute aktif ({len(rute_aktif)}) melebihi batas armada ({batas_k})")
-
-        # 2. Tiap rute terisi tidak boleh melebihi kapasitas
+        # 1. Tiap rute terisi tidak boleh melebihi kapasitas
         cap = self.instance.kapasitas
         for i, r in enumerate(rute_aktif, start=1):
             if r.total_muatan > cap:
                 masalah.append(f"Rute {i} kelebihan muatan: {r.total_muatan} > {cap}")
 
-        # 3. Semua pelanggan harus dilayani tepat satu kali dan tidak ada ID asing
+        # 2. Semua pelanggan harus dilayani tepat satu kali dan tidak ada ID asing
         pelanggan_seharusnya = {p.nomor for p in self.instance.pelanggan}
         dikunjungi = [node_id for r in rute_aktif for node_id in r.nomor_node()]
         set_dikunjungi = set(dikunjungi)
@@ -106,19 +99,12 @@ class Solution:
         rute_aktif = [r for r in self.daftar_rute if len(r.daftar_visit) > 0]
         pelanggan_seharusnya = {p.nomor for p in self.instance.pelanggan}
 
-        # 1. Cek batas armada ketat terhadap self.instance.jumlah_kendaraan
-        batas_k = getattr(self.instance, "jumlah_kendaraan", None)
-        if batas_k is None:
-            batas_k = getattr(self.instance, "batas_armada", None)
-        if batas_k is not None and len(rute_aktif) > batas_k:
-            return False
-
-        # 2. Cek kapasitas tiap rute aktif
+        # 1. Cek kapasitas tiap rute aktif
         cap = self.instance.kapasitas
         if any(r.total_muatan > cap for r in rute_aktif):
             return False
 
-        # 3. Cek pemenuhan tepat satu kali untuk seluruh pelanggan yang seharusnya
+        # 2. Cek pemenuhan tepat satu kali untuk seluruh pelanggan yang seharusnya
         dikunjungi = [node_id for r in rute_aktif for node_id in r.nomor_node()]
 
         return (

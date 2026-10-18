@@ -34,7 +34,7 @@ from baca_data import baca_instance
 from construction import ConstructionHeuristic
 from cvrp_instance import CVRPInstance
 
-SEEDS = [1, 2, 3, 4, 5]
+SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 MAKS_ITERASI = 2000
 T0 = 800.0
 COOLING_RATE = 0.990

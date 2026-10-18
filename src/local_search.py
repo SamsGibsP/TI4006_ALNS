@@ -17,7 +17,7 @@ class LocalSearch:
         self,
         instance=None,
         operators: Optional[List[str]] = None,
-        max_iterations: int = 100,
+        max_iterations: int = 30,
     ):
         self.instance = instance
         self.operators: List[str] = (
