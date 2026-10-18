@@ -24,6 +24,7 @@ import random
 import subprocess
 import sys
 import time
+from typing import TypedDict
 
 folder_tahap19 = os.path.dirname(os.path.abspath(__file__))
 dir_root = os.path.dirname(folder_tahap19)
@@ -45,10 +46,15 @@ T0 = 800.0
 COOLING_RATE = 0.990
 REACTION_FACTOR = 0.31
 
-INSTANCES = [
-    {"nama": "X-n101-k25.vrp", "bks": 27591, "label": "X-n101-k25"},
-    {"nama": "X-n143-k7.vrp", "bks": 15700, "label": "X-n143-k7"},
-    {"nama": "X-n351-k40.vrp", "bks": 25896, "label": "X-n351-k40"},
+class InstanceInfo(TypedDict):
+    nama: str
+    bks: float
+    label: str
+
+INSTANCES: list[InstanceInfo] = [
+    {"nama": "X-n101-k25.vrp", "bks": 27591.0, "label": "X-n101-k25"},
+    {"nama": "X-n143-k7.vrp", "bks": 15700.0, "label": "X-n143-k7"},
+    {"nama": "X-n351-k40.vrp", "bks": 25896.0, "label": "X-n351-k40"},
 ]
 
 KONFIGURASI_ABLATION = [
@@ -122,9 +128,9 @@ def main():
     t_total_mulai = time.time()
 
     for inst_info in INSTANCES:
-        nama_inst = str(inst_info["label"])
+        nama_inst = inst_info["label"]
         bks = float(inst_info["bks"])
-        path_vrp = os.path.join(folder_tahap19, "X", str(inst_info["nama"]))
+        path_vrp = os.path.join(folder_tahap19, "X", inst_info["nama"])
 
         print(f"\n{'#' * 115}")
         print(f" INSTANCE: {nama_inst} (BKS = {bks})")
@@ -224,7 +230,7 @@ def main():
 
     for inst_info in INSTANCES:
         nama_inst = inst_info["label"]
-        bks = inst_info["bks"]
+        bks = float(inst_info["bks"])
 
         # Cari mean Full sebagai referensi delta
         runs_full = [r for r in semua_raw_rows if r["instance"] == nama_inst and r["konfigurasi"] == "Full" and r["layak"]]

@@ -16,17 +16,16 @@ class Parameter:
     NILAI_OPTIMAL = 27591               # BKS CVRPLIB
 
     # ---- 2. Heuristik Konstruksi Solusi Awal ----------------------------
-    # Pilihan: "clarke_wright_savings" (direkomendasikan) atau "nearest_neighbor"
     METODE_KONSTRUKSI = "clarke_wright_savings"
 
-    # ---- 3. Parameter ALNS Dasar (Optimum Hasil Response Surface Methodology) --
+    # ---- 3. Parameter ALNS Dasar ---
     SEED = 42                           # Seed utama untuk reproducibility 100%
     MAKS_ITERASI = 2000                 # Jumlah iterasi pencarian ALNS
-    SUHU_AWAL = 800.0                   # T0 optimum global (RSM) untuk seluruh instance
-    LAJU_PENDINGINAN = 0.990            # Cooling rate c optimum global (RSM)
-    REACTION_FACTOR = 0.31              # Reaction factor r optimum global (RSM)
+    SUHU_AWAL = 800.0                   # T0
+    LAJU_PENDINGINAN = 0.990            # Cooling rate c
+    REACTION_FACTOR = 0.31              # Reaction factor r 
     PANJANG_SEGMEN = 100                # Frekuensi pembaruan bobot operator
-    TAMPILKAN_SETIAP = 500              # Log progres per N iterasi (0 untuk silent)
+    TAMPILKAN_SETIAP = 500              # Log progres per N iterasi
 
     # Skor performa operator adaptif
     SIGMA1 = 33.0                       # Rekor global baru ditemukan

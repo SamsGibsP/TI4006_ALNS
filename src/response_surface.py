@@ -25,6 +25,7 @@ import math
 import os
 import random
 import time
+import sys
 
 try:
     import numpy as np  # type: ignore
@@ -43,7 +44,6 @@ from alns import ALNS
 
 
 class ResponseSurfaceMethodology:
-    """Metodologi Permukaan Respon (RSM) berbasis Box-Behnken Design (BBD) didukung scikit-learn & scipy."""
 
     def __init__(
         self,
@@ -59,7 +59,6 @@ class ResponseSurfaceMethodology:
             "suhu_awal": (min_val, center_val, max_val),
             "laju_pendinginan": (min_val, center_val, max_val),
             "reaction_factor": (min_val, center_val, max_val)
-        }
         """
         self.instance = instance
         self.solusi_awal = solusi_awal
@@ -455,3 +454,47 @@ class ResponseSurfaceMethodology:
                 p = e["parameter"]
                 row = [self.nama_instance, e["run_id"], c[0], c[1], c[2]] + [p[k] for k in self.factor_names] + [f"{e['rata']:.2f}", e["terbaik"], e["terburuk"]]
                 writer.writerow(row)
+
+if __name__ == "__main__":
+    folder_ini = os.path.dirname(os.path.abspath(__file__))
+    if folder_ini not in sys.path:
+        sys.path.insert(0, folder_ini)
+
+    from baca_data import baca_instance
+    from cvrp_instance import CVRPInstance
+    from construction import ConstructionHeuristic
+
+    print("=" * 80)
+    print(" MEMULAI RESPONSE SURFACE METHODOLOGY (RSM) PADA SAMPLE INSTANCE")
+    print("=" * 80)
+
+    # 1. Muat Instance Sampel
+    path_vrp = os.path.join(folder_ini, "X", "X-n143-k7.vrp")
+    daftar_node, kapasitas, jumlah_kendaraan = baca_instance(path_vrp)
+    instance = CVRPInstance(daftar_node, kapasitas, jumlah_kendaraan)
+    solusi_awal = ConstructionHeuristic(instance).clarke_wright_savings()
+
+    # 2. Definisikan Rentang Faktor Box-Behnken (Min, Tengah, Maks)
+    factor_ranges = {
+        "suhu_awal": (500.0, 2000.0, 3500.0),
+        "laju_pendinginan": (0.990, 0.994, 0.998),
+        "reaction_factor": (0.05, 0.25, 0.45),
+    }
+
+    # 3. Buat Objek RSM dan Jalankan
+    rsm = ResponseSurfaceMethodology(
+        instance=instance,
+        solusi_awal=solusi_awal,
+        factor_ranges=factor_ranges,
+        maks_iterasi=2000,
+        daftar_seed=(1, 2, 3),
+        nama_instance="X-n143-k7.vrp"
+    )
+
+    optimum = rsm.jalankan(verbose=True)
+    rsm.cetak_laporan_lengkap(bks=15700)
+
+    # 4. Simpan ke CSV
+    path_csv_out = os.path.join(folder_ini, "hasil_rsm_instance.csv")
+    rsm.simpan_csv(path_csv_out)
+    print(f"\n[SUKSES] Berkas hasil RSM tersimpan di: {path_csv_out}")

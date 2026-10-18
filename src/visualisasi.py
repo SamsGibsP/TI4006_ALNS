@@ -25,17 +25,20 @@ dir_root = os.path.dirname(folder_tahap19)
 if folder_tahap19 not in sys.path:
     sys.path.insert(0, folder_tahap19)
 
+from typing import Any
+
 try:
     import matplotlib  # type: ignore
-    import matplotlib.pyplot as plt  # type: ignore
+    import matplotlib.pyplot as _plt  # type: ignore
 
     # Konfigurasi style grafik ilmiah
     matplotlib.rcParams['font.sans-serif'] = 'DejaVu Sans'
     matplotlib.rcParams['axes.edgecolor'] = '#333333'
     matplotlib.rcParams['axes.linewidth'] = 1.0
+    plt: Any = _plt
 except ImportError:
-    matplotlib = None  # type: ignore
-    plt = None  # type: ignore
+    matplotlib: Any = None
+    plt: Any = None
 
 from alns import ALNS
 from baca_data import baca_instance
